@@ -32,6 +32,10 @@ away on mobile browsers. Drag anywhere on the left half to move; buttons on the 
 use the skill, drink a potion and use things; pause is top right. Attacks auto-aim at the nearest
 skeleton, and the UI scales up on small screens (tall panels scroll).
 
+**Graphics (pause menu):** Auto picks Low on phones and tablets and High elsewhere. Low renders 3D at a
+lower resolution, keeps only the key lamps lit, drops real-time shadows (characters get soft blob
+shadows), glow and MSAA, and uses simpler meshes sooner: roughly 5x fewer draw calls and triangles.
+
 ## How a run works
 
 - **Camp:** walk to a hero and press E to select or unlock them. The green shrine sells permanent upgrades,

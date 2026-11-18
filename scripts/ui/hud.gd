@@ -581,6 +581,12 @@ func _build_pause() -> void:
 	quit.text = "Abandon run (keep 50% gold)"
 	quit.pressed.connect(func(): Sfx.play("ui_click"); quit_to_camp.emit())
 	v.add_child(quit)
+	var gfx := Button.new()
+	gfx.name = "GraphicsButton"
+	gfx.text = "Graphics: " + Game.graphics_label()
+	gfx.pressed.connect(func(): Sfx.play("ui_click"); Game.cycle_graphics())
+	Game.quality_changed.connect(func(): gfx.text = "Graphics: " + Game.graphics_label())
+	v.add_child(gfx)
 	var fs := Button.new()
 	fs.name = "FullscreenButton"
 	fs.pressed.connect(func(): Sfx.play("ui_click"); toggle_fullscreen())

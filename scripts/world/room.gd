@@ -352,6 +352,8 @@ func _build_lighting() -> void:
 		l.omni_range = 9.0
 		l.omni_attenuation = 1.2
 		l.shadow_enabled = _torch_lights.size() < 2
+		if _torch_lights.size() % 3 == 0:
+			l.add_to_group("key_light")   # Low graphics keeps every third torch lit
 		var outward := Vector3(sin(s[1]), 0, cos(s[1]))
 		l.position = s[0] + Vector3.UP * 0.6 + outward * 0.9
 		lights.add_child(l)
@@ -497,6 +499,7 @@ func _build_content() -> void:
 		l.light_energy = 3.0
 		l.omni_range = 7.0
 		l.position.y = 2.2
+		l.add_to_group("key_light")
 		shrine.add_child(l)
 		for x in [-2.5, 2.5]:
 			var c := Models.halloween("candle_triple")
@@ -539,6 +542,7 @@ func _build_merchant() -> void:
 	lamp.light_energy = 3.0
 	lamp.omni_range = 9.0
 	lamp.position = Vector3(0, 3.0, -2.5)
+	lamp.add_to_group("key_light")
 	add_child(lamp)
 	for w_ in merchant_wares():
 		_make_ware(w_, w_.pos)
@@ -916,6 +920,7 @@ func _spawn_stairs() -> void:
 	l.light_energy = 3.0
 	l.omni_range = 6.0
 	l.position.y = 1.0
+	l.add_to_group("key_light")
 	it.add_child(l)
 	var cs := CollisionShape3D.new()
 	var bs := BoxShape3D.new()

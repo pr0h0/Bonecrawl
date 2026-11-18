@@ -80,6 +80,7 @@ func build() -> void:
 	ccs.position = Vector3(0, 4.0, 0)
 	crypt.add_child(ccs)
 	var cl := OmniLight3D.new()
+	cl.add_to_group("key_light")
 	cl.light_color = Color(0.4, 0.6, 1.0)
 	cl.light_energy = 3.0
 	cl.omni_range = 8.0
@@ -142,6 +143,7 @@ func build() -> void:
 		l.light_energy = 2.2
 		l.omni_range = 7.0
 		l.position = p + Vector3(0.0, 2.9, 0) + (Vector3(0.9, 0, 0) if p.x < 0 else Vector3(-0.9, 0, 0))
+		l.add_to_group("key_light")
 		add_child(l)
 	for p in [Vector3(-6, 0, 9), Vector3(6.5, 0, 8.5), Vector3(-9, 0, -4), Vector3(13, 0, -6)]:
 		Models.prop(self, Models.HALLOWEEN % "pumpkin_orange_jackolantern", p, rng.randf() * TAU)

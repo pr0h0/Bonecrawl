@@ -283,6 +283,7 @@ var best_floor := 0
 var runs := 0
 var wins := 0
 var music_volume := 0.7
+var graphics := "auto"   # auto | high | low  (auto = low on phones and tablets)
 var sfx_volume := 0.8
 var selected_class := "knight"
 var buildings := {}            # id -> true
@@ -312,9 +313,77 @@ func _ready() -> void:
 	_setup_input()
 	load_game()
 	_apply_volumes()
-	if OS.has_feature("web_android") or OS.has_feature("web_ios") or OS.has_feature("mobile") \
-			or "--touch" in OS.get_cmdline_user_args():
+	if is_mobile_device() or "--touch" in OS.get_cmdline_user_args():
 		enable_touch_mode.call_deferred()
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--graphics="):
+			graphics = a.get_slice("=", 1)
+	get_tree().node_added.connect(_on_node_added)
+	apply_quality.call_deferred()
+
+
+func is_mobile_device() -> bool:
+	return OS.has_feature("web_android") or OS.has_feature("web_ios") or OS.has_feature("mobile")
+
+
+# ---------------- graphics quality ----------------
+## Low (phones, or chosen in the pause menu) renders 3D at a lower resolution without MSAA,
+## glow or point-light shadows, and keeps only the "key_light" lamps: in the browser renderer
+## every extra point light is another full pass over the objects it touches.
+signal quality_changed
+
+
+func low_quality() -> bool:
+	return graphics == "low" or (graphics == "auto" and (touch_mode or is_mobile_device()))
+
+
+func graphics_label() -> String:
+	if graphics == "auto":
+		return "Auto (%s)" % ("Low" if low_quality() else "High")
+	return graphics.capitalize()
+
+
+func cycle_graphics() -> void:
+	graphics = {"auto": "high", "high": "low", "low": "auto"}[graphics]
+	apply_quality()
+	save_game()
+
+
+func apply_quality() -> void:
+	var low := low_quality()
+	var vp := get_tree().root
+	vp.msaa_3d = Viewport.MSAA_DISABLED if low else Viewport.MSAA_2X
+	var h := float(maxi(DisplayServer.window_get_size().y, 1))
+	# 3D pixels: ~620 lines on Low (sharp UI is drawn separately at full resolution), cap at 1440 on High
+	vp.scaling_3d_scale = clampf(620.0 / h, 0.4, 1.0) if low else clampf(1440.0 / h, 0.5, 1.0)
+	RenderingServer.directional_shadow_atlas_set_size(2048 if low else 4096, true)
+	# switch to the importer's simplified meshes sooner (the dungeon kit is very dense)
+	vp.mesh_lod_threshold = 4.0 if low else 1.0
+	for l in vp.find_children("*", "OmniLight3D", true, false):
+		_tune_light(l)
+	quality_changed.emit()
+
+
+func _on_node_added(n: Node) -> void:
+	if n is OmniLight3D and low_quality():
+		_tune_light.call_deferred(n)
+
+
+func _tune_light(l: OmniLight3D) -> void:
+	if not is_instance_valid(l):
+		return
+	if not l.has_meta("q_shadow"):
+		l.set_meta("q_shadow", l.shadow_enabled)
+	if low_quality():
+		l.shadow_enabled = false
+		if not l.is_in_group("key_light") and l.visible:
+			l.visible = false
+			l.set_meta("q_hidden", true)
+	else:
+		l.shadow_enabled = l.get_meta("q_shadow")
+		if l.get_meta("q_hidden", false):
+			l.visible = true
+			l.set_meta("q_hidden", false)
 
 
 ## Phones and tablets: on-screen controls (TouchControls), auto-aim, and no "mouse click = attack"
@@ -347,6 +416,7 @@ func _apply_touch_scale() -> void:
 		if css_h != null and float(css_h) > 0.0:
 			f = clampf(560.0 / float(css_h), 1.0, 1.5)
 	get_tree().root.content_scale_factor = f
+	apply_quality()
 
 
 func _setup_input() -> void:
@@ -1082,7 +1152,7 @@ func save_game() -> void:
 	var data := {
 		"bank_gold": bank_gold, "unlocked": unlocked, "upgrades": upgrades,
 		"best_floor": best_floor, "runs": runs, "wins": wins,
-		"music_volume": music_volume, "sfx_volume": sfx_volume, "selected_class": selected_class,
+		"music_volume": music_volume, "sfx_volume": sfx_volume, "selected_class": selected_class, "graphics": graphics,
 		"buildings": buildings, "mastery": mastery,
 		"torment": torment, "torment_unlocked": torment_unlocked, "torment_cleared": torment_cleared, "torment_clears": torment_clears,
 		"stash": stash, "equipped": equipped, "shop_stock": shop_stock,
@@ -1113,6 +1183,9 @@ func load_game() -> void:
 	wins = int(data.get("wins", 0))
 	music_volume = float(data.get("music_volume", 0.7))
 	sfx_volume = float(data.get("sfx_volume", 0.8))
+	graphics = str(data.get("graphics", "auto"))
+	if not graphics in ["auto", "high", "low"]:
+		graphics = "auto"
 	selected_class = str(data.get("selected_class", "knight"))
 	var b = data.get("buildings", {})
 	for k in b:

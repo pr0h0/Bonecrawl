@@ -39,6 +39,40 @@ func setup_model(model_path: String, scale := 1.0) -> void:
 	_flash_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	for m in Models.meshes_of(model):
 		(m as MeshInstance3D).material_overlay = _flash_mat
+	_add_blob_shadow(scale)
+
+
+static var _blob_mat: StandardMaterial3D
+
+## Low graphics turns real shadows off; a soft dark disc keeps characters grounded.
+func _add_blob_shadow(sc: float) -> void:
+	if _blob_mat == null:
+		var g := Gradient.new()
+		g.set_color(0, Color(0, 0, 0, 0.75))
+		g.set_color(1, Color(0, 0, 0, 0))
+		g.add_point(0.45, Color(0, 0, 0, 0.6))
+		var tex := GradientTexture2D.new()
+		tex.gradient = g
+		tex.fill = GradientTexture2D.FILL_RADIAL
+		tex.fill_from = Vector2(0.5, 0.5)
+		tex.fill_to = Vector2(1.0, 0.5)
+		tex.width = 64
+		tex.height = 64
+		_blob_mat = StandardMaterial3D.new()
+		_blob_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_blob_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_blob_mat.albedo_texture = tex
+	var blob := MeshInstance3D.new()
+	blob.name = "BlobShadow"
+	var pm := PlaneMesh.new()
+	pm.size = Vector2.ONE * 1.9 * sc
+	blob.mesh = pm
+	blob.material_override = _blob_mat
+	blob.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	blob.position.y = 0.06
+	add_child(blob)
+	blob.visible = Game.low_quality()
+	Game.quality_changed.connect(func(): if is_instance_valid(blob): blob.visible = Game.low_quality())
 
 
 func add_capsule(radius := 0.45, height := 1.8) -> void:

@@ -77,7 +77,12 @@ func _ready() -> void:
 	add_child(env)
 	sun = DirectionalLight3D.new()
 	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 45.0
 	add_child(sun)
+	Game.quality_changed.connect(func():
+		# Low: no real shadows at all (they double the draw calls); actors get blob shadows instead
+		sun.shadow_enabled = not Game.low_quality()
+		_set_env(_env_mode))
 	cam = CameraRig.new()
 	cam.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(cam)
@@ -165,16 +170,20 @@ func _ready() -> void:
 
 # ---------------- environment ----------------
 
+var _env_mode := "hub"
+
 func _set_env(mode: String) -> void:
 	var e := env.environment
 	e.background_mode = Environment.BG_COLOR
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	e.tonemap_exposure = 1.0
-	e.glow_enabled = true
+	var low := Game.low_quality()
+	_env_mode = mode
+	e.glow_enabled = not low
 	e.glow_intensity = 0.7
 	e.glow_bloom = 0.05
 	e.glow_hdr_threshold = 1.1
-	e.ssao_enabled = true
+	e.ssao_enabled = not low
 	e.ssao_radius = 1.2
 	e.ssao_intensity = 1.6
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -197,6 +206,8 @@ func _set_env(mode: String) -> void:
 		sun.light_color = Color(0.75, 0.75, 0.9)
 		sun.light_energy = 0.35
 		sun.rotation = Vector3(deg_to_rad(-62), deg_to_rad(20), 0)
+	if low:
+		e.ambient_light_energy *= 1.4   # fewer lamps on Low: lift the ambient so rooms stay readable
 
 
 # ---------------- camp ----------------
@@ -752,6 +763,29 @@ func _autotest_tick(delta: float) -> void:
 			_on_boon_picked(keys[0])
 	if int(_auto_time) != int(_auto_time - delta) and int(_auto_time) % 10 == 0:
 		var alive := get_tree().get_nodes_in_group("enemies").size()
+		if auto_args.has("perf") and not has_meta("mesh_dumped") and _auto_time >= 20:
+			set_meta("mesh_dumped", true)
+			var tri := {}
+			var cnt := {}
+			for mi in get_tree().root.find_children("*", "MeshInstance3D", true, false):
+				if not mi.is_visible_in_tree() or mi.mesh == null:
+					continue
+				var t := 0
+				for si in mi.mesh.get_surface_count():
+					var arr = mi.mesh.surface_get_arrays(si)
+					var idx = arr[Mesh.ARRAY_INDEX]
+					t += (idx.size() if idx != null else arr[Mesh.ARRAY_VERTEX].size()) / 3
+				var key: String = mi.mesh.resource_path.get_file() if mi.mesh.resource_path != "" else str(mi.name)
+				var owner_n := mi.get_parent()
+				key = "%s<%s>" % [key, owner_n.name if owner_n else ""]
+				tri[key] = tri.get(key, 0) + t
+				cnt[key] = cnt.get(key, 0) + 1
+			var keys := tri.keys()
+			keys.sort_custom(func(a, b): return tri[a] > tri[b])
+			for k in keys.slice(0, 25):
+				print("MESH %8d tris  x%d  %s" % [tri[k], cnt[k], k])
+		if auto_args.has("perf"):
+			print("PERF process_ms=%.2f physics_ms=%.2f nodes=%d objects=%d draw_calls=%d prims=%d" % [Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0, Performance.get_monitor(Performance.OBJECT_NODE_COUNT), Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)])
 		print("AUTOTEST t=%d fps=%d floor=%d room=%d type=%s hp=%.0f kills=%d alive=%d cleared=%s ts=%.2f state=%s goal=%s pos=%s" % [_auto_time, Engine.get_frames_per_second(), Game.run.get("floor", 0), Game.run.get("room", 0), room.room_type if room else "-", Game.run.get("hp", 0), Game.run.get("kills", 0), alive, room.is_cleared if room else false, Engine.time_scale, state, _bot_goal, player.global_position.snapped(Vector3.ONE * 0.1) if player else Vector3.ZERO])
 	if _auto_time > float(auto_args.get("seconds", "240")):
 		print("AUTOTEST TIMEOUT floor=%d room=%d kills=%d gold=%d hp=%.0f" % [Game.run.floor, Game.run.room, Game.run.kills, Game.run.gold, Game.run.hp])

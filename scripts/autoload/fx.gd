@@ -166,7 +166,7 @@ func explosion(pos: Vector3, radius := 3.0) -> void:
 
 
 func flash_light(pos: Vector3, color: Color, energy: float, radius: float, duration: float) -> void:
-	if world == null:
+	if world == null or Game.low_quality():
 		return
 	var l := OmniLight3D.new()
 	l.light_color = color
