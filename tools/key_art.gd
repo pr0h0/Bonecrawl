@@ -87,22 +87,36 @@ func _scene():
 	_char("Skeleton_Rogue", Vector3(4.4, 0, -4.0), -0.5, "melee/Melee_Dualwield_Attack_Stab", 0.3, "Skeleton_Blade", "Skeleton_Blade", 1.0, true)
 	var sm := _char("Skeleton_Mage", Vector3(7.2, 0, -7.6), -0.4, "ranged/Ranged_Magic_Spellcasting", 0.5, "Skeleton_Staff", "", 1.0, true)
 	_glow_eyes(sm, Color(0.6, 0.4, 1))
-	_char("Skeleton_Warrior", Vector3(-7.0, 0, -7.0), 0.4, "melee/Melee_Blocking", 0.3, "Skeleton_Axe", "Skeleton_Shield_Large_A", 1.0, true)
-	# heroes in front of the court, turned toward the viewer, ready to fight
-	_char("Knight", Vector3(-1.5, 0, 2.0), 0.25, "melee/Melee_Blocking", 0.3, "sword_1handed", "shield_badge_color")
-	_char("Barbarian", Vector3(1.7, 0, 1.6), -0.3, "melee/Melee_2H_Idle", 0.3, "axe_2handed", "")
-	_char("Ranger", Vector3(-4.6, 0, 2.4), 1.0, "ranged/Ranged_Bow_Aiming_Idle", 0.3, "", "bow_withString")
-	_char("Mage", Vector3(4.8, 0, 2.4), -0.6, "ranged/Ranged_Magic_Spellcasting", 0.6, "staff", "")
-	_char("Rogue_Hooded", Vector3(0.1, 0, 3.1), 0.1, "melee/Melee_Dualwield_Attack_Stab", 0.15, "dagger", "dagger")
-	_light(Vector3(4.8, 2.2, 3.4), Color(0.4, 0.6, 1.0), 2.5, 5.0)
+	var golem := _char("Skeleton_Golem", Vector3(-7.4, 0, -7.6), 0.45, "melee/Melee_2H_Attack", 0.35, "Skeleton_Golem_Axe", "", 0.95, true)
+	_glow_eyes(golem, Color(1, 0.5, 0.15))
+	var necro := _char("Necromancer", Vector3(-3.0, 0, -8.6), 0.2, "ranged/Ranged_Magic_Summon", 0.5, "Skeleton_Staff", "", 1.0, true)
+	_glow_eyes(necro, Color(0.4, 1, 0.5))
+	_light(Vector3(-3.0, 2.5, -7.6), Color(0.35, 1.0, 0.45), 2.5, 5.0)
+	# eight heroes in front of the court, turned toward the viewer, ready to fight
+	var sp := 1.62
+	var heroes := [
+		["Ranger", "ranged/Ranged_Bow_Aiming_Idle", 0.3, "", "bow_withString", 0.9],
+		["Druid", "ranged/Ranged_Magic_Spellcasting", 0.4, "druid_staff", "", 0.6],
+		["Knight", "melee/Melee_Blocking", 0.3, "sword_1handed", "shield_badge_color", 0.35],
+		["Paladin_with_Helmet", "melee/Melee_Blocking", 0.3, "paladin_hammer", "paladin_shield", 0.15],
+		["Rogue_Hooded", "melee/Melee_Dualwield_Attack_Stab", 0.15, "dagger", "dagger", -0.05],
+		["Barbarian", "melee/Melee_2H_Idle", 0.3, "axe_2handed", "", -0.25],
+		["Engineer", "ranged/Ranged_1H_Aiming", 0.3, "crossbow_1handed", "", -0.5],
+		["Mage", "ranged/Ranged_Magic_Spellcasting", 0.6, "staff", "", -0.7],
+	]
+	for i in heroes.size():
+		var h: Array = heroes[i]
+		var x := (i - 3.5) * sp
+		_char(h[0], Vector3(x, 0, 2.2 + (0.8 if i % 2 == 1 else 0.0)), h[5], h[1], h[2], h[3], h[4])
+	_light(Vector3(5.7, 2.2, 3.4), Color(0.4, 0.6, 1.0), 2.5, 5.0)
 	_light(Vector3(0, 4.5, 8), Color(1.0, 0.85, 0.7), 3.0, 12.0)
 	var cam = Camera3D.new(); add_child(cam)
 	if mode == "cover":
-		cam.position = Vector3(0, 5.6, 10.5); cam.fov = 50
-		cam.look_at(Vector3(0, 1.9, -2.2))
+		cam.position = Vector3(0, 6.4, 13.6); cam.fov = 50
+		cam.look_at(Vector3(0, 2.9, -2.2))
 	else:
 		cam.position = Vector3(0, 6.0, 13.0); cam.fov = 40
-		cam.look_at(Vector3(0, 2.6, -3.0))
+		cam.look_at(Vector3(0, 2.3, -3.0))
 
 
 func _glow_eyes(c: Node3D, col: Color):

@@ -52,7 +52,7 @@
 | Field | File |
 |---|---|
 | Cover image (630×500) | `itch/cover_630x500.png` (`cover_1260x1000.png` is the same at 2×, for sharp displays) |
-| Screenshots | `itch/screenshots/01_fireball.png` … `05_camp.png` |
+| Screenshots | `itch/screenshots/01_vampire_lord.png` … `06_camp.png` (6 shots) |
 | Trailer | (optional: a YouTube link) |
 
 ### Theme (Edit theme on the game page)
@@ -73,20 +73,28 @@
 
 **Crawl the crypt. Choose your doors. Break the Bone King.**
 
-Bonecrawl is a fast ¾ top-down roguelite. Pick one of five heroes at the graveyard camp and descend into a skeleton-infested crypt, one room at a time. Every cleared room opens new gates that show what lies behind them: a fight, an elite pack, treasure, a shrine, traps or a merchant. Plan your route, survive, and face the Bone King on the third floor. Then leave with your loot, or go deeper into endless floors.
+Bonecrawl is a fast ¾ top-down roguelite. Pick one of eight heroes at the graveyard camp and descend into a skeleton-infested crypt, one room at a time. Every cleared room opens new gates that show what lies behind them: a fight, an elite pack, treasure, a shrine or traps. Plan your route, survive, and face the Bone King on the third floor. Then leave with your loot, or go deeper to meet a new boss every third floor.
 
-**Five heroes, five playstyles**
+**Eight heroes, eight playstyles**
 - **Knight:** sword and board. Shield Wall blocks and reflects arrows, then bashes.
 - **Barbarian:** heavy cleaves. Whirlwind spins through everything.
 - **Ranger:** fast arrows. Volley fires a fan of 7.
 - **Mage:** arcane bolts. Fireball explodes on impact.
 - **Rogue:** quick daggers and backstabs. Smoke Bomb vanishes, and the next hit deals ×3.
+- **Paladin:** holy hammer. Consecrate burns the undead and heals you.
+- **Druid:** thorn bolts. Entangle roots a whole pack in place.
+- **Engineer:** crossbow. Deploys a turret that shoots for you.
 
-**Between runs**
+**Combat with some bite**
+- Three-hit combos with a heavy finisher, dash strikes out of a roll, and perfect dodges that slow time and set up a guaranteed crit.
+- Enemies that each ask for a different answer: archers that kite you, dashers that outrun you but are left winded after a lunge, shield warriors that guard the casters, Golems that charge, and Necromancers that blink away and raise the dead.
+- Four bosses: the Bone King, Vampire Lord Draven, the Black Knight and the Lich.
+
+**Between runs and between floors**
+- A travelling merchant waits after every descent with potions, brews, boons, materials and sealed weapons.
 - Build up your camp: Blacksmith, Armory, Alchemist, Merchant, Treasury and the Gambler's Den.
-- Forge class weapons and shared armour, rings, charms and shields. Legendary items carry unique powers.
+- Forge class weapons and shared armour, rings, charms and shields. Every rarity has its own look, and each class has a Legendary with a unique power.
 - Upgrade heroes with Mastery, and permanent upgrades at the shrine.
-- Monsters drop materials and, rarely, weapons. Craft Legendaries such as Oathkeeper, Skullsplitter, Stormstring, Lichstaff and Widowfang.
 - Torment I–V: harder floors and better loot. Each Torment level must be conquered by a different hero.
 
 **Controls**
@@ -104,7 +112,7 @@ Bonecrawl is a fast ¾ top-down roguelite. Pick one of five heroes at the gravey
 Progress is saved in your browser. Clearing site data for itch.io resets it.
 
 **Credits.** All art and audio are CC0:
-- 3D characters, dungeon and weapons: KayKit by Kay Lousberg (kaylousberg.com)
+- 3D characters, dungeon, weapons and animations: KayKit by Kay Lousberg (kaylousberg.com)
 - Halloween props, fonts, SFX and jingles: Kenney (kenney.nl)
 - Hit effects: Binbun3D (bun3d.com)
 - Music (OpenGameArt): "Dungeon Ambience" by yd, "Mysterious Cave Theme Loop" by beardalaxy, "8-Bit Battle Loop" by wolfgang

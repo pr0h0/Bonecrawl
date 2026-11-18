@@ -323,8 +323,6 @@ func _pick_exits() -> Array:
 		return ["boss"] if Game.is_boss_floor(int(Game.run.floor)) else ["stairs"]
 	var opts := []
 	var weights := ROOM_WEIGHTS.duplicate()
-	if Game.has_building("merchant") and next_idx >= 2:
-		weights["merchant"] = 16
 	if Game.run.floor == 1 and next_idx == 1:
 		weights.erase("elite")
 	var count := 2 if randf() < 0.85 else 3
@@ -360,7 +358,7 @@ func _load_room(type_: String) -> void:
 	room.shrine_used.connect(_on_shrine)
 	room.buy_boon.connect(_on_shrine)
 	room.boss_killed.connect(_on_boss_killed)
-	room.message.connect(func(t): hud.show_banner(t, Color(1, 0.4, 0.3) if t.contains("KING") else HUD.GOLD))
+	room.message.connect(func(t): hud.show_banner(t, Color(1, 0.4, 0.3) if t.ends_with("RISES") else HUD.GOLD))
 	player = Player.new()
 	world.add_child(player)
 	player.global_position = room.entrance
@@ -378,7 +376,8 @@ func _load_room(type_: String) -> void:
 	var hw := room.w * Room.CELL * 0.5
 	var hd := room.d * Room.CELL * 0.5
 	cam.use_bounds = true
-	cam.bounds = AABB(Vector3(-hw + 5.0, 0, -hd + 1.0), Vector3(maxf(hw * 2 - 10.0, 0.1), 0, maxf(hd * 2 - 3.0, 0.1)))
+	# the lower camera sees further south, so keep the follow point well inside the room
+	cam.bounds = AABB(Vector3(-hw + 5.0, 0, -hd + 2.0), Vector3(maxf(hw * 2 - 10.0, 0.1), 0, maxf(hd * 2 - 7.5, 0.1)))
 	cam.snap()
 	hud.show_run(true)
 	hud.set_floor_info(Game.run.floor, Game.run.room, type_)
@@ -422,9 +421,9 @@ func _on_descend() -> void:
 	Game.run.floor += 1
 	Game.run.room = 0
 	Game.best_floor = max(Game.best_floor, int(Game.run.floor))
-	# a breather between floors
+	# a breather between floors: a safe room with the travelling merchant
 	Game.run.hp = minf(Game.run.max_hp, Game.run.hp + Game.run.max_hp * 0.3)
-	_load_room("start")
+	_load_room("merchant")
 	hud.show_banner("FLOOR %d" % Game.run.floor, HUD.GOLD, 1.5)
 	await hud.fade_to(0.0, 0.6)
 
@@ -468,7 +467,8 @@ func _on_boss_killed() -> void:
 	Fx.hitstop(250)
 	Fx.shake(1.0, 0.8)
 	Game.register_boss_kill()
-	hud.show_banner("THE BONE KING FALLS", HUD.GOLD, 2.5)
+	var bname := String(Game.BOSSES[Game.boss_for_floor(int(Game.run.floor))].name).to_upper()
+	hud.show_banner("%s FALLS" % bname, HUD.GOLD, 2.5)
 	Sfx.music("")
 	Sfx.play("victory")
 	await get_tree().create_timer(3.0).timeout

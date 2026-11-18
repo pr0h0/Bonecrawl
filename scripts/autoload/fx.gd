@@ -222,6 +222,17 @@ func shake(strength: float, duration := 0.2) -> void:
 
 var _hitstop_token := 0
 
+## Short slow motion (perfect dodge). Shares the hitstop token so the two never fight.
+func slowmo(scale := 0.3, ms := 450) -> void:
+	_hitstop_until = Time.get_ticks_msec() + ms
+	_hitstop_token += 1
+	var token := _hitstop_token
+	Engine.time_scale = scale
+	await get_tree().create_timer(ms / 1000.0, true, false, true).timeout
+	if token == _hitstop_token:
+		Engine.time_scale = 1.0
+
+
 func hitstop(ms := 50) -> void:
 	var until := Time.get_ticks_msec() + ms
 	if until <= _hitstop_until:

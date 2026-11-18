@@ -16,6 +16,8 @@ var _done := false
 var pierce := 0              # enemies it can pass through (Ranger mastery)
 var slow_on_hit := false     # Hunter's Mark
 var burning := false         # Mage Burning Ground
+var ignite := false          # Dragonmaw: sets skeletons ablaze
+var homing := 0.0            # radians/second it turns toward the hero (necromancer skulls)
 
 
 func _ready() -> void:
@@ -29,6 +31,8 @@ func _ready() -> void:
 	cs.shape = sph
 	add_child(cs)
 	body_entered.connect(_on_body)
+	if not from_player:
+		add_to_group("enemy_projectiles")
 	direction.y = 0
 	direction = direction.normalized()
 	_build_visual()
@@ -49,11 +53,26 @@ func _build_visual() -> void:
 			else:
 				m.rotation = Vector3(PI / 2, 0, 0)
 			m.scale = Vector3.ONE * 1.2
-		"bolt", "enemy_bolt", "fireball":
+		"bolt", "enemy_bolt", "fireball", "enemy_skull", "blood_bolt", "thorn", "holy", "turret_bolt":
 			var color := Color(0.45, 0.6, 1.0)
 			var r := 0.22
 			if kind == "enemy_bolt":
 				color = Color(0.4, 1.0, 0.3)
+			elif kind == "enemy_skull":
+				color = Color(0.7, 0.3, 1.0)
+				r = 0.32
+			elif kind == "blood_bolt":
+				color = Color(1.0, 0.12, 0.2)
+				r = 0.26
+			elif kind == "thorn":
+				color = Color(0.45, 0.95, 0.35)
+				r = 0.18
+			elif kind == "holy":
+				color = Color(1.0, 0.9, 0.45)
+				r = 0.3
+			elif kind == "turret_bolt":
+				color = Color(1.0, 0.7, 0.3)
+				r = 0.15
 			elif kind == "fireball":
 				color = Color(1.0, 0.45, 0.1)
 				r = 0.45
@@ -101,6 +120,15 @@ func _build_visual() -> void:
 func _physics_process(delta: float) -> void:
 	if _done:
 		return
+	if homing > 0.0:
+		var ps := get_tree().get_nodes_in_group("player")
+		if ps.size() > 0 and not ps[0].dead:
+			var to: Vector3 = ps[0].global_position - global_position
+			to.y = 0
+			if to.length() > 0.5:
+				var ang := direction.signed_angle_to(to.normalized(), Vector3.UP)
+				direction = direction.rotated(Vector3.UP, clampf(ang, -homing * delta, homing * delta))
+				look_at(global_position + direction, Vector3.UP)
 	global_position += direction * speed * delta
 	life -= delta
 	if life <= 0:
@@ -132,6 +160,8 @@ func _on_body(body: Node) -> void:
 				Fx.hitstop(25)
 				if slow_on_hit and a.has_method("slow") and not a.dead:
 					a.call("slow", 2.5)
+				if ignite and not a.dead:
+					a.call("add_dot", 9.0, 3.0, Color(1, 0.5, 0.1))
 			Fx.hit(global_position)
 		if from_player and pierce > 0:
 			pierce -= 1

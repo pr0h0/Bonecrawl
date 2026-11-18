@@ -48,7 +48,7 @@ func build(type_: String, floor_: int, exits_: Array, seed_: int) -> void:
 		"treasure", "shrine":
 			w = 5; d = 3
 		"merchant":
-			w = 5; d = 4
+			w = 6; d = 4
 		"traps":
 			w = 6; d = 5
 		"start":
@@ -272,7 +272,8 @@ func _build_props() -> void:
 				var p := Vector3(sx * (w * CELL * 0.25), 0, sz * (d * CELL * 0.22))
 				var r := Rect2(p.x - 1.0, p.z - 1.0, 2.0, 2.0)
 				occupied.append(r)
-				Models.prop(props, Models.DUNGEON % "pillar", p, 0.0, true, 1.0, 0.9)
+				var pil := Models.prop(props, Models.DUNGEON % "pillar", p, 0.0, true, 1.0, 0.9)
+				pil.add_to_group("occluders")
 	# a few clusters in the open floor for cover
 	if room_type in ["fight", "elite", "start"]:
 		for n in rng.randi_range(1, 3):
@@ -409,9 +410,12 @@ func _process(delta: float) -> void:
 
 func _enemy_pool() -> Array:
 	match floor_num:
-		1: return ["minion", "minion", "minion", "warrior", "archer"]
-		2: return ["minion", "minion", "warrior", "rogue", "archer", "mage"]
-		_: return ["minion", "warrior", "warrior", "rogue", "archer", "mage", "mage"]
+		1: return ["minion", "minion", "minion", "warrior", "archer", "rogue"]
+		2: return ["minion", "minion", "warrior", "rogue", "archer", "mage", "golem"]
+		_: return ["minion", "warrior", "warrior", "rogue", "archer", "mage", "golem", "necromancer"]
+
+
+const WAVE_CAPS := {"golem": 1, "necromancer": 1, "mage": 2}
 
 
 func _make_wave(count: int, elites := 0) -> Array:
@@ -419,9 +423,15 @@ func _make_wave(count: int, elites := 0) -> Array:
 	var wave := []
 	var t := Game.torment_level()
 	count += t / 2                      # Torment II+ adds enemies
+	var counts := {}
 	for i in count:
 		var is_elite := i < elites or rng.randf() < 0.08 * t
-		wave.append([pool[rng.randi_range(0, pool.size() - 1)], is_elite])
+		var kind: String = pool[rng.randi_range(0, pool.size() - 1)]
+		var cap: int = WAVE_CAPS.get(kind, 99) + (1 if floor_num >= 6 else 0)
+		if counts.get(kind, 0) >= cap:
+			kind = "minion"
+		counts[kind] = counts.get(kind, 0) + 1
+		wave.append([kind, is_elite and kind != "golem"])
 	return wave
 
 
@@ -530,18 +540,47 @@ func _build_merchant() -> void:
 	lamp.omni_range = 9.0
 	lamp.position = Vector3(0, 3.0, -2.5)
 	add_child(lamp)
+	for w_ in merchant_wares():
+		_make_ware(w_, w_.pos)
+
+
+## What the merchant between floors offers. Paid with gold found this run; the camp's Merchant's Tent adds stock and a discount.
+func merchant_wares() -> Array:
 	var f := floor_num
 	var tier: int = Game.run.get("weapon_tier", 0)
-	var wares := [
-		{"id": "potion", "name": "Potion", "model": "potionLarge_red", "price": 25 + 5 * f},
-		{"id": "heal", "name": "Heal", "model": "potionMedium_green", "price": 15 + 5 * f},
-		{"id": "upgrade", "name": "Upgrade" if tier < 2 else "Sharpen", "model": "sword_%s" % ["uncommon", "rare", "rare"][tier], "price": 70 + 20 * f},
-		{"id": "vigor", "name": "+15 HP", "model": "potionLarge_blue", "price": 50 + 15 * f},
+	var cls: String = Game.run.get("class", "knight")
+	var brew_ids := Game.BREWS.keys().filter(func(k): return k != "healing")
+	var brew: String = brew_ids[rng.randi_range(0, brew_ids.size() - 1)]
+	var mat: String = ["essence", "essence", "crystal"][rng.randi_range(0, 2)]
+	var pool := [
+		{"id": "heal", "name": "Heal 50%", "model": "potionMedium_green", "price": 15 + 5 * f},
+		{"id": "vigor", "name": "+15 Max HP", "model": "potionLarge_blue", "price": 50 + 15 * f},
 		{"id": "boon", "name": "Boon", "model": "spellBook", "price": 90 + 20 * f},
+		{"id": "brew:" + brew, "name": Game.BREWS[brew].name, "model": Game.BREWS[brew].model, "price": 80 + 15 * f},
+		{"id": "mats:" + mat, "name": "3 " + Game.MATERIALS[mat].name, "model": "artifact" if mat == "crystal" else "potionSmall_blue", "price": (60 if mat == "essence" else 220) + 10 * f},
+		{"id": "weapon", "name": "Sealed " + Game.CLASS_WEAPONS[cls].noun, "model": "chest_rare", "price": 160 + 30 * f},
+		{"id": "reroll_boon", "name": "Cleanse Boon", "model": "candle_triple", "price": 40 + 10 * f},
 	]
-	var xs := [-6.0, -3.0, 0.0, 3.0, 6.0]
+	if tier < 2:
+		pool.append({"id": "upgrade", "name": "Sharpen Weapon", "model": "sword_%s" % ["uncommon", "rare"][tier], "price": 70 + 20 * f})
+	if Game.run.get("boons", []).is_empty():
+		pool = pool.filter(func(x): return x.id != "reroll_boon")
+	# shuffle with the room's seed so a save-scum can't reroll the shop
+	for i in range(pool.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var t = pool[i]
+		pool[i] = pool[j]
+		pool[j] = t
+	var tent := Game.has_building("merchant")
+	var n := 6 if tent else 4
+	var wares := [{"id": "potion", "name": "Potion", "model": "potionLarge_red", "price": 25 + 5 * f}]
+	wares.append_array(pool.slice(0, n - 1))
+	var xs := [-7.5, -4.5, -1.5, 1.5, 4.5, 7.5] if n == 6 else [-4.5, -1.5, 1.5, 4.5]
 	for i in wares.size():
-		_make_ware(wares[i], Vector3(xs[i], 0, -1.2))
+		if tent:
+			wares[i].price = int(round(wares[i].price * 0.85))
+		wares[i]["pos"] = Vector3(xs[i], 0, -1.2)
+	return wares
 
 
 func _make_ware(ware: Dictionary, pos: Vector3) -> void:
@@ -558,8 +597,11 @@ func _make_ware(ware: Dictionary, pos: Vector3) -> void:
 	cs.shape = bs
 	cs.position.y = 0.4
 	it.add_child(cs)
-	var item := Models.dungeon(ware.model)
-	var box := Models.aabb_of(Models.DUNGEON % ware.model)
+	var mpath: String = Models.DUNGEON % ware.model
+	if not ResourceLoader.exists(mpath):
+		mpath = Models.HALLOWEEN % ware.model
+	var item: Node3D = Models.scene(mpath).instantiate()
+	var box := Models.aabb_of(mpath)
 	var sc := 0.75 / maxf(box.size.x, maxf(box.size.y, box.size.z))
 	item.scale = Vector3.ONE * sc
 	item.position = Vector3(0, 0.75 - box.position.y * sc, 0)
@@ -568,12 +610,15 @@ func _make_ware(ware: Dictionary, pos: Vector3) -> void:
 	tag.text = "%s
 %d GOLD" % [ware.name.to_upper(), ware.price]
 	tag.font = load("res://ui/fonts/kenney_future.ttf")
-	tag.font_size = 44
+	tag.font_size = 38
 	tag.outline_size = 12
 	tag.modulate = Color(1, 0.85, 0.4)
 	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	tag.pixel_size = 0.006
-	tag.position = Vector3(0, 2.0, 0)
+	tag.autowrap_mode = TextServer.AUTOWRAP_WORD
+	tag.width = 420.0
+	# neighbours alternate heights so long names never overlap
+	tag.position = Vector3(0, 2.0 if int(floor((pos.x + 9.0) / 3.0)) % 2 == 0 else 2.75, 0)
 	it.add_child(tag)
 	it.prompt = "Buy (%d gold)" % ware.price
 	var spin := create_tween().set_loops()
@@ -608,6 +653,27 @@ func _apply_ware(id: String, p: Player) -> void:
 			Fx.text(p.global_position + Vector3.UP * 2.4, "+15 MAX HEALTH", Color(0.5, 0.8, 1.0), 44)
 		"boon":
 			buy_boon.emit()
+		"weapon":
+			# a sealed class weapon: Uncommon to Epic
+			Pickup.drop_weapon(self, p.global_position, Game.roll_weapon(Game._weighted([0, 45, 40, 15, 0]), Game.run["class"]))
+		"reroll_boon":
+			# swap your weakest boon for a fresh pick of three
+			var boons: Array = Game.run.boons
+			if not boons.is_empty():
+				Game.remove_boon(boons[0])
+				p.max_hp = Game.run.max_hp
+				p.hp = minf(p.hp, p.max_hp)
+			buy_boon.emit()
+		_:
+			if id.begins_with("brew:"):
+				var b := id.substr(5)
+				Game._apply_brew(b)
+				p.max_hp = Game.run.max_hp
+				p.hp = minf(Game.run.hp, p.max_hp)
+				Fx.text(p.global_position + Vector3.UP * 2.4, Game.BREWS[b].name.to_upper(), Game.BREWS[b].color, 40)
+				Sfx.play("drink")
+			elif id.begins_with("mats:"):
+				Pickup.drop_material(self, p.global_position, id.substr(5), 3)
 
 
 func _spawn_chest(tier: String, pos: Vector3, mimic_chance := 0.0) -> Chest:
@@ -640,7 +706,7 @@ func _spawn_boss() -> void:
 	boss.died.connect(_on_enemy_died)
 	boss.spawn_from_floor()
 	boss.state_until = boss.time + 3.0
-	message.emit("THE BONE KING RISES")
+	message.emit("%s RISES" % String(Game.BOSSES[boss.boss_id].name).to_upper())
 
 
 func finish_event() -> void:

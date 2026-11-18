@@ -54,7 +54,9 @@ func add_capsule(radius := 0.45, height := 1.8) -> void:
 func play(clip: String, blend := 0.12, speed := 1.0, lock := 0.0) -> void:
 	if anim == null:
 		return
-	var full := Models.anim_name(clip)
+	var full := _resolve_clip(clip)
+	if full == "":
+		return
 	if lock > 0.0:
 		_anim_lock_until = time + lock
 	if full == _current_anim and anim.is_playing() and lock <= 0.0:
@@ -74,8 +76,34 @@ func anim_locked() -> bool:
 	return time < _anim_lock_until
 
 
-func clip_length(clip: String) -> float:
+## Large-rig characters (Golem, Black Knight) have fewer clips; map medium-rig names onto theirs.
+const LARGE_CLIPS := {
+	"Idle_B": "general/Idle_A", "Hit_B": "general/Hit_A", "Death_B": "general/Death_A",
+	"Skeletons_Death": "general/Death_A", "Skeletons_Awaken_Floor": "general/Idle_A",
+	"Skeletons_Death_Resurrect": "general/Idle_A", "Skeletons_Walking": "move/Walking_A",
+	"Walking_B": "move/Walking_A", "Walking_C": "move/Walking_A", "Running_B": "move/Running_A",
+	"Melee_1H_Attack_Chop": "melee/Melee_2H_Attack", "Melee_2H_Attack_Chop": "melee/Melee_2H_Attack",
+	"Melee_2H_Attack_Slice": "melee/Melee_2H_Attack", "Melee_1H_Attack_Jump_Chop": "melee/Melee_2H_Slam",
+	"Melee_2H_Attack_Spin": "melee/Melee_Dualwield_SlashCombo", "Melee_2H_Attack_Spinning": "melee/Melee_Dualwield_SlashCombo",
+	"Ranged_Magic_Summon": "melee/Melee_Unarmed_Smash", "Ranged_Magic_Spellcasting": "melee/Melee_Unarmed_Smash",
+	"Melee_Dualwield_Attack_Stab": "melee/Melee_Dualwield_Slash", "Use_Item": "general/Idle_A", "Throw": "general/Idle_A",
+}
+
+
+func _resolve_clip(clip: String) -> String:
 	var full := Models.anim_name(clip)
+	if anim == null or anim.has_animation(full):
+		return full
+	var alt: String = LARGE_CLIPS.get(clip.get_file(), "")
+	if alt != "":
+		var f2 := Models.anim_name(alt)
+		if anim.has_animation(f2):
+			return f2
+	return ""
+
+
+func clip_length(clip: String) -> float:
+	var full := _resolve_clip(clip)
 	if anim and anim.has_animation(full):
 		return anim.get_animation(full).length
 	return 0.5

@@ -30,6 +30,12 @@ var _step_timer := 0.0
 var weapon_node: Node3D
 var _weapon_tier_shown := -1
 var _weapon_rarity := -1        # rarity of the equipped class weapon (-1 = starting weapon)
+# combat depth: 3-hit combo, dash strike out of a dodge, perfect-dodge counter
+var combo := 0
+var _last_attack_t := -9.0
+var dash_strike_until := 0.0
+var counter_until := 0.0
+var _bump_time := 0.0
 
 
 ## Legendary power active this run (never in camp).
@@ -85,11 +91,12 @@ func _equip() -> void:
 	var r_node: Node3D = null
 	var l_node: Node3D = null
 	if r_model != "":
-		r_node = Models.attach(model, Models.WEAPON % r_model, "handslot.r")
+		var rp := Game.weapon_path(r_model)
+		r_node = Models.attach(model, rp, "handslot.r", Game.weapon_offset(rp))
 	if l_model != "":
-		# bows are modelled with the string on the far side; turn them so the string faces the archer
-		var l_off := Transform3D(Basis(Vector3.UP, PI), Vector3.ZERO) if l_model.begins_with("bow") else Transform3D.IDENTITY
-		l_node = Models.attach(model, Models.WEAPON % l_model, "handslot.l", l_off)
+		# bows are turned so the string faces the archer (see Game.weapon_offset)
+		var lp := Game.weapon_path(l_model)
+		l_node = Models.attach(model, lp, "handslot.l", Game.weapon_offset(lp))
 	weapon_node = r_node if cw.hand == "handslot.r" else l_node
 	if _weapon_rarity == 4 and weapon_node:
 		var gl := OmniLight3D.new()
@@ -157,6 +164,7 @@ func _physics_process(delta: float) -> void:
 	if time < dodging_until:
 		desired = dodge_dir * speed * 2.6
 		apply_motion(desired, delta)
+		_smash_bumped(delta)
 		return
 
 	if input_enabled:
@@ -203,8 +211,15 @@ func _physics_process(delta: float) -> void:
 
 	if time < stealth_until:
 		tint(Color(0.15, 0.15, 0.25), 0.55)
+	elif time < counter_until:
+		tint(Color(1.0, 0.8, 0.3), 0.25 + 0.15 * sin(time * 20.0))
+	elif counter_until > 0.0:
+		counter_until = 0.0
+		tint(Color.WHITE, 0.0)
 
 	apply_motion(desired, delta)
+	if not in_hub:
+		_smash_bumped(delta)
 
 
 func _read_input() -> Dictionary:
@@ -292,6 +307,8 @@ func damage_value(mult := 1.0) -> Dictionary:
 	if Game.has_legend("berserker") and hp < max_hp * 0.4:
 		dmg *= 1.3
 	var crit := randf() < float(Game.run.get("crit", 0.08))
+	if time < counter_until:
+		crit = true                 # perfect-dodge counter: guaranteed crit
 	if crit:
 		dmg *= 1.8
 	return {"dmg": dmg, "crit": crit}
@@ -302,19 +319,36 @@ func _attack() -> void:
 	var cd: float = float(cls.cd) * (1.0 - 0.08 * m("quickdraw"))
 	_locked_aim = aim_dir
 	_locked_until = time + cd * 0.9
+	# chain: attacks in quick succession build a combo; the third is a heavy finisher
+	if time - _last_attack_t < cd + 0.45:
+		combo = (combo + 1) % 3
+	else:
+		combo = 0
+	_last_attack_t = time
+	var finisher := combo == 2
+	var mult := 1.0
+	if finisher:
+		mult *= 1.7
+		cd *= 1.25
+	if time < dash_strike_until:
+		mult *= 1.5                 # dash strike: attacking right out of a dodge
+		dash_strike_until = 0.0
+		Fx.text(global_position + Vector3.UP * 2.6, "DASH STRIKE", Color(0.6, 0.9, 1.0), 34)
 	attack_cd = cd
 	attacking_until = time + cd * 0.9
 	face(aim_dir, true)
 	var clip: String = cls.anim
+	if finisher and cls.has("finisher"):
+		clip = cls.finisher
 	var anim_speed := clampf(clip_length(clip) / maxf(cd * 1.15, 0.2), 1.0, 2.6)
 	play(clip, 0.05, anim_speed, cd * 0.95)
 	var hit_t: float = cls.hit_time
 	if cls.attack == "melee":
-		Sfx.play("swing_heavy" if class_id == "barbarian" else "swing", -4.0)
-		_schedule(hit_t, _melee_hit)
+		Sfx.play("swing_heavy" if class_id == "barbarian" or finisher else "swing", -4.0)
+		_schedule(hit_t, _melee_hit.bind(mult, finisher))
 	else:
-		Sfx.play("bow" if class_id == "ranger" else "magic", -4.0)
-		_schedule(hit_t, _ranged_shot)
+		Sfx.play(cls.get("shot_sfx", "bow" if class_id == "ranger" else "magic"), -4.0)
+		_schedule(hit_t, _ranged_shot.bind(mult, finisher))
 
 
 func _schedule(delay: float, fn: Callable) -> void:
@@ -332,9 +366,9 @@ func _process_pending_hits() -> void:
 	pending_hits = still
 
 
-func _melee_hit() -> void:
-	var range_: float = cls.range
-	var half_arc: float = deg_to_rad(cls.arc * 0.5)
+func _melee_hit(extra := 1.0, finisher := false) -> void:
+	var range_: float = cls.range + (0.5 if finisher else 0.0)
+	var half_arc: float = deg_to_rad((cls.arc + (50.0 if finisher else 0.0)) * 0.5)
 	var fwd := forward()
 	var hit_any := false
 	for e in get_tree().get_nodes_in_group("enemies"):
@@ -347,7 +381,7 @@ func _melee_hit() -> void:
 			continue
 		if dist > 0.3 and fwd.angle_to(to.normalized()) > half_arc:
 			continue
-		var mult := 1.0
+		var mult := extra
 		var crit_forced := false
 		if class_id == "rogue":
 			# backstab: attacking from behind the enemy
@@ -363,9 +397,12 @@ func _melee_hit() -> void:
 			crit_forced = true
 			Fx.shake(0.3, 0.12)
 		var dv := damage_value(mult)
-		var applied: float = e.take_damage(dv.dmg, global_position, 5.0 if class_id != "barbarian" else 8.0, self)
+		var knock := (5.0 if class_id != "barbarian" else 8.0) * (2.2 if finisher else 1.0)
+		var applied: float = e.take_damage(dv.dmg, global_position, knock, self)
 		if applied > 0:
 			hit_any = true
+			if finisher and not e.dead and e.has_method("stagger"):
+				e.call("stagger", 0.45)
 			if m("poison") > 0 and not e.dead:
 				e.call("add_dot", 4.0, 3.0, Color(0.5, 1.0, 0.3))
 			if L("widowfang") and not e.dead:
@@ -377,24 +414,35 @@ func _melee_hit() -> void:
 		to2.y = 0
 		if to2.length() < range_ + 0.6 and (to2.length() < 0.5 or fwd.angle_to(to2.normalized()) < half_arc):
 			b.call("smash")
+	if hit_any and finisher and class_id == "paladin" and (L("dawnbreaker") or m("judgement") > 0):
+		var c := global_position + fwd * range_ * 0.6
+		_smite(c, 2.5 if L("dawnbreaker") else 1.0, 2.6)
 	if hit_any:
 		ambush_ready = false
 		stealth_until = 0.0
 		tint(Color.WHITE, 0.0)
 		Sfx.play("hit_bone", -2.0)
-		Fx.shake(0.18 if class_id != "barbarian" else 0.35, 0.12)
-		Fx.hitstop(45 if class_id != "barbarian" else 70)
+		Fx.shake((0.18 if class_id != "barbarian" else 0.35) * (1.8 if finisher else 1.0), 0.12)
+		Fx.hitstop((45 if class_id != "barbarian" else 70) + (40 if finisher else 0))
+		counter_until = minf(counter_until, 0.001)
 
 
-func _ranged_shot() -> void:
+func _ranged_shot(extra := 1.0, finisher := false) -> void:
 	aim_dir = _assisted_aim(aim_dir)   # re-check at release: the target may have moved during the draw
 	_locked_aim = aim_dir
-	var dv := damage_value()
+	var dv := damage_value(extra)
+	var shots: Array = []
 	if m("twin_bolts") > 0:
-		_fire(aim_dir.rotated(Vector3.UP, deg_to_rad(6)), dv)
-		_fire(aim_dir.rotated(Vector3.UP, deg_to_rad(-6)), damage_value())
+		shots.append(_fire(aim_dir.rotated(Vector3.UP, deg_to_rad(6)), dv))
+		shots.append(_fire(aim_dir.rotated(Vector3.UP, deg_to_rad(-6)), damage_value(extra)))
 	else:
-		_fire(aim_dir, dv)
+		shots.append(_fire(aim_dir, dv))
+	if finisher:
+		# the third shot is charged: it pierces and hits harder
+		for p in shots:
+			p.set("pierce", int(p.get("pierce")) + 2)
+			(p as Node3D).scale = Vector3.ONE * 1.5
+	counter_until = minf(counter_until, 0.001)
 	if L("stormstring"):
 		for ang in [-12.0, 12.0]:
 			_fire(aim_dir.rotated(Vector3.UP, deg_to_rad(ang)), damage_value(0.8))
@@ -413,6 +461,10 @@ func _fire(dir: Vector3, dv: Dictionary, kind := "", speed := -1.0) -> Node3D:
 		p.pierce = m("piercing")
 	if p.kind == "bolt" and L("lichstaff"):
 		p.explode_radius = 2.2
+	if p.kind == "thorn":
+		p.pierce = m("thornweave")
+	if class_id == "engineer" and L("dragonmaw"):
+		p.ignite = true
 	get_parent().add_child(p)
 	p.global_position = global_position + Vector3.UP * 1.25 + dir * 0.8
 	return p
@@ -466,6 +518,97 @@ func _skill() -> void:
 			_start_dodge(aim_dir, 0.25 + 0.1 * m("shadow_step"))
 			for e in get_tree().get_nodes_in_group("enemies"):
 				e.call("lose_target", 2.5)
+		"consecrate":
+			play("melee/Melee_Block_Attack", 0.05, 1.3, 0.4)
+			Sfx.play("boon", -2.0)
+			Fx.flash_light(global_position + Vector3.UP, Color(1, 0.85, 0.4), 6.0, 7.0, 0.4)
+			var z := HolyZone.new()
+			z.radius = 4.0 + 1.0 * m("radiance")
+			z.duration = 4.0 + 1.5 * m("hallowed")
+			z.owner_player = self
+			get_parent().add_child(z)
+			z.global_position = Vector3(global_position.x, 0.0, global_position.z)
+		"entangle":
+			face(aim_dir, true)
+			play("ranged/Ranged_Magic_Summon", 0.05, 1.5, 0.4)
+			Sfx.play("magic")
+			var target_pos := global_position + aim_dir * 5.0
+			var r := 3.6
+			var held := 0
+			for e in get_tree().get_nodes_in_group("enemies"):
+				if e.dead:
+					continue
+				var dd: Vector3 = e.global_position - target_pos
+				dd.y = 0
+				if dd.length() < r:
+					e.call("root", 2.2 + 0.75 * m("overgrowth"))
+					if m("bramble") > 0:
+						e.call("add_dot", 8.0, 2.2 + 0.75 * m("overgrowth"), Color(0.4, 0.9, 0.3))
+					held += 1
+			if m("regrowth") > 0 and held > 0:
+				heal(4.0 * held)
+			Fx.ring(target_pos, r, 0.35, Color(0.4, 0.9, 0.3, 0.6))
+			Fx.burst(target_pos + Vector3.UP * 0.3, Color(0.35, 0.8, 0.25), 40, 5.0, 0.2, 0.8, -6.0, r)
+			_spawn_vines(target_pos, r, 2.2 + 0.75 * m("overgrowth"))
+		"turret":
+			play("general/Interact", 0.05, 1.6, 0.35)
+			Sfx.play("door", -6.0)
+			var maxn := 2 if m("twin_turret") > 0 else 1
+			var existing := get_tree().get_nodes_in_group("turrets")
+			while existing.size() >= maxn:
+				existing[0].call("expire")
+				existing.remove_at(0)
+			var t := Turret.new()
+			t.owner_player = self
+			t.duration = 10.0 + 3.0 * m("durable")
+			t.interval = 0.5 / (1.0 + 0.2 * m("overclock")) / (2.0 if L("dragonmaw") else 1.0)
+			t.shrapnel = m("shrapnel") > 0
+			get_parent().add_child(t)
+			t.global_position = Vector3(global_position.x, 0.0, global_position.z) + aim_dir * 1.4
+
+
+func _spawn_vines(center: Vector3, r: float, life: float) -> void:
+	## Thorny tendrils that mark the rooted area.
+	var root := Node3D.new()
+	get_parent().add_child(root)
+	root.global_position = Vector3(center.x, 0, center.z)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.25, 0.55, 0.2)
+	for i in 14:
+		var mi := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 0.02
+		cm.bottom_radius = 0.12
+		cm.height = randf_range(0.8, 1.5)
+		cm.radial_segments = 5
+		mi.mesh = cm
+		mi.material_override = mat
+		var a := randf() * TAU
+		var d := sqrt(randf()) * r
+		mi.position = Vector3(cos(a) * d, cm.height * 0.5 - 0.1, sin(a) * d)
+		mi.rotation = Vector3(randf_range(-0.4, 0.4), 0, randf_range(-0.4, 0.4))
+		mi.scale = Vector3(1, 0.01, 1)
+		root.add_child(mi)
+		create_tween().tween_property(mi, "scale", Vector3.ONE, 0.2)
+	var tw := root.create_tween()
+	tw.tween_interval(life)
+	tw.tween_property(root, "scale", Vector3(1, 0.01, 1), 0.3)
+	tw.tween_callback(root.queue_free)
+
+
+func _smite(center: Vector3, mult: float, radius: float) -> void:
+	## Holy pillar (Paladin's Judgement mastery / Dawnbreaker).
+	Fx.flash_light(center + Vector3.UP * 2.0, Color(1, 0.9, 0.5), 8.0, radius * 3.0, 0.3)
+	Fx.burst(center + Vector3.UP * 0.3, Color(1, 0.9, 0.5), 30, 7.0, 0.18, 0.6, 4.0, radius * 0.5)
+	Fx.ring(center, radius, 0.25, Color(1, 0.9, 0.5, 0.6))
+	Sfx.play("magic", -2.0)
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e.dead or e.global_position.distance_to(center) > radius:
+			continue
+		var dv := damage_value(mult)
+		var a: float = e.take_damage(dv.dmg, center, 6.0, self)
+		if a > 0:
+			Fx.number(e.global_position + Vector3.UP * 2.4, a, Color(1, 0.9, 0.5), true)
 
 
 func _shield_bash() -> void:
@@ -523,14 +666,57 @@ func _start_dodge(dir: Vector3, duration := 0.32) -> void:
 	dir.y = 0
 	dodge_dir = dir.normalized() if dir.length() > 0.01 else forward()
 	dodging_until = time + duration
+	dash_strike_until = dodging_until + 0.4
+	if not in_hub and _is_perfect_dodge():
+		Fx.slowmo(0.3, 420)
+		Fx.text(global_position + Vector3.UP * 2.8, "PERFECT!", Color(1, 0.85, 0.3), 52)
+		Fx.flash_light(global_position + Vector3.UP, Color(1, 0.85, 0.4), 4.0, 5.0, 0.4)
+		Sfx.play("boon", -6.0)
+		counter_until = time + 1.6     # next hit is a guaranteed crit
+		dodge_cd = 0.0
+		duration += 0.08
 	invulnerable_until = maxf(invulnerable_until, time + duration + 0.05)
-	dodge_cd = 0.75 * float(Game.run.get("dodge_mult", 1.0)) if not in_hub else 0.75
+	if counter_until <= time:
+		dodge_cd = 0.75 * float(Game.run.get("dodge_mult", 1.0)) if not in_hub else 0.75
 	face(dodge_dir, true)
 	play("moveadv/Dodge_Forward", 0.05, 1.5, duration)
 	Sfx.play("dodge", -4.0)
 	Fx.dust(global_position, 8)
 	pending_hits.clear()
 	attacking_until = 0.0
+
+
+func _is_perfect_dodge() -> bool:
+	## Dodging just before a blow lands: an enemy within reach is about to strike, or a shot is about to hit.
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e.dead or e.get("state") != "windup":
+			continue
+		var left: float = float(e.get("state_until")) - float(e.get("time"))
+		if left <= 0.3 and e.global_position.distance_to(global_position) < float(e.get("data").get("range", 2.0)) + 2.0:
+			return true
+	for p in get_tree().get_nodes_in_group("enemy_projectiles"):
+		var to: Vector3 = global_position - p.global_position
+		to.y = 0
+		if to.length() < 3.0 and (p.get("direction") as Vector3).dot(to.normalized()) > 0.7:
+			return true
+	return false
+
+
+func _smash_bumped(delta: float) -> void:
+	## Barrels and crates never trap you: roll into them, or keep pushing for a moment, and they break.
+	var bumped: Node = null
+	for i in get_slide_collision_count():
+		var c := get_slide_collision(i).get_collider()
+		if c is Node and (c as Node).is_in_group("breakables"):
+			bumped = c
+			break
+	if bumped == null:
+		_bump_time = 0.0
+		return
+	_bump_time += delta
+	if time < dodging_until or _bump_time > 0.25:
+		bumped.call("smash")
+		_bump_time = 0.0
 
 
 func use_potion() -> void:

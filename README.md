@@ -29,8 +29,9 @@ Or open the folder in the Godot 4.7 editor and press F5.
 
 ## How a run works
 
-- **Camp:** walk to a hero and press E to select or unlock them. The green shrine sells permanent upgrades.
-  Enter the crypt to start.
+- **Camp:** walk to a hero and press E to select or unlock them. The green shrine sells permanent upgrades,
+  and the buildings (Blacksmith, Armory, Alchemist, Merchant, Treasury, Chapel, Gambler's Den) sell gear,
+  brews and crafting. Enter the crypt to start.
 - **Floors:** 3 floors of 5 rooms. After clearing a room, its gates open and show what lies behind each one:
   - **Fight:** waves of skeletons, sometimes a chest.
   - **Elite:** tougher, glowing skeletons and a guaranteed uncommon chest.
@@ -38,9 +39,22 @@ Or open the folder in the Godot 4.7 editor and press F5.
   - **Shrine:** pick 1 of 3 boons for the rest of the run.
   - **Traps:** spike floors that hurt skeletons too.
   - **Descend:** the last room of floors 1–2 has a trapdoor down.
-  - **The Bone King:** the boss of floor 3. He slams, leaps, spins and summons minions.
-- **Loot:** coins, potions (max 3), healing flasks, and weapon upgrades (Common → Uncommon → Rare).
-- **Death:** you keep 50% of the gold you found. Victory keeps 100%.
+  - **Boss:** the last room of floor 3. Beat it, then leave with your loot or go deeper.
+- **Between floors:** every descent lands you in a safe room with the travelling merchant (potions, healing,
+  max health, boons, brews, crafting materials, a sealed class weapon, weapon sharpening, swapping a boon).
+  Paid with gold found this run; the camp's Merchant's Tent adds 2 wares and a 15% discount.
+- **Going deeper:** every third floor has a boss: the Bone King (3), Vampire Lord Draven (6),
+  the Black Knight (9), the Lich (12), then the cycle repeats, harder each time.
+- **Death:** you keep part of the gold you found (50%, up to 95% with Treasury upgrades). Victory keeps 100%.
+
+## Combat
+
+- **Combo:** attack in quick succession; every third hit is a finisher (more damage, wider arc, knocks back and
+  staggers regular skeletons; ranged finishers pierce).
+- **Dash strike:** attack right out of a dodge roll for +50% damage.
+- **Perfect dodge:** roll just before a blow or a shot lands: time slows, your dodge refreshes and your next
+  hit is a guaranteed crit.
+- Barrels and crates break when you roll into them or keep pushing against them.
 
 ## Classes
 
@@ -51,20 +65,34 @@ Or open the folder in the Godot 4.7 editor and press F5.
 | Ranger (100 gold) | Fast arrows | **Volley:** fan of 7 arrows |
 | Mage (150 gold) | Arcane bolts | **Fireball:** explodes on impact |
 | Rogue (200 gold) | Quick daggers, backstab ×2.5 | **Smoke Bomb:** vanish, next hit ×3 |
+| Paladin (250 gold) | Holy hammer | **Consecrate:** blessed ground burns skeletons and heals you |
+| Druid (250 gold) | Thorn bolts | **Entangle:** roots every skeleton in an area |
+| Engineer (350 gold) | Crossbow bolts | **Turret:** deploys a turret that shoots for 10 seconds |
+
+Every class has 4 mastery upgrades, its own weapon line (Common to Legendary, each rarity with its own model)
+and a Legendary weapon with a unique power.
 
 ## Enemies
 
-Skeleton Minions (swarm, can be interrupted), Warriors (shield blocks frontal hits; flank them or use skills),
-Rogues (telegraphed lunges), Archers (crossbow at range), Mages (cast bolts and **revive fallen skeletons**,
-so kill them first), Mimics, and the Bone King.
+| Enemy | Behaviour |
+|---|---|
+| Minion | Swarms you; can be interrupted mid-swing. Some act as bodyguards for archers and mages. |
+| Warrior | Shield blocks frontal hits: flank them or use skills. Often guards ranged allies. |
+| Rogue (dasher) | Faster than you; circles, then lunges. After a dash it is **winded** for a moment and takes +50% damage. |
+| Archer | Keeps its distance and runs from you; repositions after each shot. |
+| Mage | Casts bolts and **revives fallen skeletons**. |
+| Skeleton Golem | Slow giant. Ground slam, and a long telegraphed charge that leaves it winded. |
+| Necromancer | Summons minions, raises the dead, fires homing skulls and blinks away when you get close. |
+| Mimic | A chest with teeth. |
 
 ## Project layout
 
 ```
 scripts/autoload/   game.gd (state, save, input), models.gd (KayKit loader, shared animations),
                     sfx.gd (sound banks, music), fx.gd (hit effects, numbers, particles, shake, hitstop)
-scripts/actors/     actor.gd, player.gd, enemy.gd (all skeleton types + boss), mimic.gd
-scripts/objects/    projectile, pickup, chest, breakable, spike_trap, exit_door, interactable
+scripts/actors/     actor.gd, player.gd, enemy.gd (all skeleton types + the four bosses), mimic.gd
+scripts/objects/    projectile, pickup, chest, breakable, spike_trap, exit_door, interactable,
+                    fire_zone, holy_zone (Consecrate), turret (Engineer)
 scripts/world/      room.gd (procedural room builder + encounter), hub.gd (camp)
 scripts/ui/         hud.gd (all menus/HUD), icons.gd (renders 3D items to HUD icons)
 scripts/main.gd     game flow, room transitions, automated play-test bot
@@ -89,8 +117,9 @@ Save data lives in `user://bonecrawl_save.json`.
 
 All assets are CC0 (public domain). See `assets/licenses/` and `audio/music/CREDITS.txt`.
 
-- 3D models and animations: **KayKit** by Kay Lousberg (kaylousberg.itch.io): Dungeon, Adventurers,
-  Skeletons, Character Animations, Halloween Bits, Prototype Bits, City Builder Bits
+- 3D models and animations: **KayKit** by Kay Lousberg (kaylousberg.com): Dungeon, Adventurers,
+  Skeletons, Character Animations, Halloween Bits, Prototype Bits, City Builder Bits, Fantasy Weapons Bits,
+  and the Mystery Monthly characters (Paladin, Vampire, Black Knight)
 - Hit VFX and toon shader: **Binbun3D** (binbun3d.itch.io)
 - Sound effects, jingles and fonts: **Kenney** (kenney.nl)
 - Music: "Dungeon Ambience" by yd, "Mysterious Cave Theme Loop" by beardalaxy, "8-Bit Battle Loop" by wolfgang

@@ -12,14 +12,14 @@ const CLASSES := {
 	"knight": {
 		"name": "Knight", "model": "Knight", "weapon_r": "sword_1handed", "weapon_l": "shield_badge_color",
 		"hp": 130, "speed": 6.0, "dmg": 15.0, "attack": "melee", "anim": "Melee_1H_Attack_Chop",
-		"range": 2.5, "arc": 120.0, "cd": 0.55, "hit_time": 0.28,
+		"range": 2.6, "arc": 130.0, "cd": 0.42, "hit_time": 0.13, "finisher": "Melee_1H_Attack_Slice_Horizontal",
 		"skill": "shield_wall", "skill_name": "Shield Wall", "skill_cd": 6.0, "cost": 0,
 		"desc": "Sturdy sword and board. Shield Wall blocks everything in front of you and reflects arrows, then bashes.",
 	},
 	"barbarian": {
 		"name": "Barbarian", "model": "Barbarian", "weapon_r": "axe_2handed", "weapon_l": "",
 		"hp": 150, "speed": 5.6, "dmg": 24.0, "attack": "melee", "anim": "Melee_2H_Attack_Chop",
-		"range": 2.9, "arc": 150.0, "cd": 0.85, "hit_time": 0.42,
+		"range": 2.9, "arc": 150.0, "cd": 0.72, "hit_time": 0.28, "finisher": "Melee_2H_Attack_Slice",
 		"skill": "whirlwind", "skill_name": "Whirlwind", "skill_cd": 7.0, "cost": 0,
 		"desc": "Slow, brutal cleaves. Whirlwind spins through everything around you.",
 	},
@@ -40,12 +40,33 @@ const CLASSES := {
 	"rogue": {
 		"name": "Rogue", "model": "Rogue_Hooded", "weapon_r": "dagger", "weapon_l": "dagger",
 		"hp": 90, "speed": 7.2, "dmg": 11.0, "attack": "melee", "anim": "Melee_Dualwield_Attack_Stab",
-		"range": 2.2, "arc": 100.0, "cd": 0.32, "hit_time": 0.16,
+		"range": 2.2, "arc": 110.0, "cd": 0.3, "hit_time": 0.12, "finisher": "Melee_Dualwield_Attack_Chop",
 		"skill": "smoke_bomb", "skill_name": "Smoke Bomb", "skill_cd": 7.0, "cost": 200,
 		"desc": "Fast daggers that crit from behind. Smoke Bomb vanishes you; the next hit deals triple damage.",
 	},
+	"paladin": {
+		"name": "Paladin", "model": "Paladin_with_Helmet", "weapon_r": "paladin_hammer", "weapon_l": "paladin_shield",
+		"hp": 145, "speed": 5.8, "dmg": 18.0, "attack": "melee", "anim": "Melee_1H_Attack_Chop",
+		"range": 2.6, "arc": 120.0, "cd": 0.6, "hit_time": 0.18, "finisher": "Melee_1H_Attack_Slice_Diagonal",
+		"skill": "consecrate", "skill_name": "Consecrate", "skill_cd": 9.0, "cost": 250,
+		"desc": "Holy hammer and shield. Consecrate blesses the ground: it burns the undead and heals you while you stand in it.",
+	},
+	"druid": {
+		"name": "Druid", "model": "Druid", "weapon_r": "druid_staff", "weapon_l": "",
+		"hp": 100, "speed": 6.3, "dmg": 13.0, "attack": "ranged", "anim": "Ranged_Magic_Shoot",
+		"projectile": "thorn", "proj_speed": 22.0, "cd": 0.42, "hit_time": 0.14,
+		"skill": "entangle", "skill_name": "Entangle", "skill_cd": 7.0, "cost": 250,
+		"desc": "Thorn bolts from range. Entangle roots every skeleton in an area so you can pick them apart.",
+	},
+	"engineer": {
+		"name": "Engineer", "model": "Engineer", "weapon_r": "crossbow_1handed", "weapon_l": "",
+		"hp": 110, "speed": 6.0, "dmg": 14.0, "attack": "ranged", "anim": "Ranged_1H_Shoot", "shot_sfx": "bow",
+		"projectile": "arrow", "proj_speed": 28.0, "cd": 0.5, "hit_time": 0.1,
+		"skill": "turret", "skill_name": "Turret", "skill_cd": 10.0, "cost": 350,
+		"desc": "Crossbow bolts. Deploys a turret that shoots the nearest skeleton for 10 seconds.",
+	},
 }
-const CLASS_ORDER := ["knight", "barbarian", "ranger", "mage", "rogue"]
+const CLASS_ORDER := ["knight", "barbarian", "ranger", "mage", "rogue", "paladin", "druid", "engineer"]
 
 const UPGRADES := {
 	"vitality": {"name": "Vitality", "desc": "+12 max health", "max": 5, "base_cost": 40},
@@ -67,7 +88,7 @@ const BUILDINGS := {
 	"blacksmith": {"name": "Blacksmith", "desc": "Sells and forges class weapons. Every run also starts with a sharpened (Uncommon) weapon.", "cost": 400},
 	"alchemist": {"name": "Alchemist", "desc": "Brews potions that empower your next run. Healing potions also heal 60% and you carry one more.", "cost": 350},
 	"chapel": {"name": "Chapel", "desc": "Start every run with a random boon.", "cost": 500},
-	"merchant": {"name": "Merchant's Tent", "desc": "Trades crafting materials in camp, and sets up shop inside the crypt.", "cost": 300},
+	"merchant": {"name": "Merchant's Tent", "desc": "Trades crafting materials in camp. The merchant you meet between floors brings 2 more wares and sells 15% cheaper.", "cost": 300},
 	"treasury": {"name": "Treasury", "desc": "Guards your gold when you fall. Upgrade it from 50% kept up to 95%.", "cost": 450},
 	"armory": {"name": "Armory", "desc": "Sells and forges helms, shields, rings and charms, shared by every hero. Stock refreshes after each run.", "cost": 600},
 	"gambler": {"name": "Gambler's Den", "desc": "Spin the wheel to multiply your gold (x0 to x2), or buy loot chests full of gold and gear.", "cost": 250},
@@ -141,18 +162,43 @@ const CRAFT_COSTS := {
 	4: {"gold": 1000, "mats": {"bone": 30, "iron": 20, "essence": 10, "crystal": 5, "shard": 2}},
 }
 ## Weapons belong to one class. Models by rarity, plus each class's legendary power.
+const FW := "res://assets/fantasy_weapons/%s.gltf"
 const CLASS_WEAPONS := {
-	"knight": {"noun": "Sword", "hand": "handslot.r", "models": ["sword_1handed", "sword_1handed", "sword_1handed", "sword_2handed", "sword_2handed_color"],
+	"knight": {"noun": "Sword", "hand": "handslot.r", "models": ["sword_1handed", FW % "sword_A", FW % "sword_C", FW % "sword_E", FW % "sword_G"],
 		"legend": "oathkeeper", "legend_name": "Oathkeeper", "legend_desc": "Shield Wall heals 15% max health and its bash hits twice as hard"},
-	"barbarian": {"noun": "Axe", "hand": "handslot.r", "models": ["axe_1handed", "axe_1handed", "axe_2handed", "axe_2handed", "axe_2handed"],
+	"barbarian": {"noun": "Axe", "hand": "handslot.r", "models": ["axe_1handed", FW % "axe_A", FW % "axe_B", FW % "axe_C", FW % "axe_D"],
 		"legend": "skullsplitter", "legend_name": "Skullsplitter", "legend_desc": "20% of hits deal triple damage"},
-	"ranger": {"noun": "Bow", "hand": "handslot.l", "models": ["bow_withString", "bow_withString", "bow_withString", "bow_withString", "bow_withString"],
+	"ranger": {"noun": "Bow", "hand": "handslot.l", "models": ["bow_withString", FW % "bow_A_withString", FW % "bow_A_withString", FW % "bow_B_withString", FW % "bow_C_withString"],
 		"legend": "stormstring", "legend_name": "Stormstring", "legend_desc": "Every shot fires two extra arrows"},
-	"mage": {"noun": "Staff", "hand": "handslot.r", "models": ["wand", "staff", "staff", "staff", "staff"],
+	"mage": {"noun": "Staff", "hand": "handslot.r", "models": ["wand", FW % "wand_A", FW % "staff_B", FW % "staff_C", FW % "wand_B"],
 		"legend": "lichstaff", "legend_name": "Staff of the Lich", "legend_desc": "Bolts explode on impact, hitting everything nearby"},
-	"rogue": {"noun": "Daggers", "hand": "handslot.r", "models": ["dagger", "dagger", "dagger", "dagger", "dagger"],
+	"rogue": {"noun": "Daggers", "hand": "handslot.r", "models": ["dagger", FW % "dagger_A", FW % "dagger_B", FW % "dagger_B", FW % "dagger_C"],
 		"legend": "widowfang", "legend_name": "Widow's Fangs", "legend_desc": "Every hit poisons for heavy damage over time"},
+	"paladin": {"noun": "Hammer", "hand": "handslot.r", "models": ["paladin_hammer", FW % "hammer_D", FW % "hammer_A", FW % "hammer_B", FW % "hammer_C"],
+		"legend": "dawnbreaker", "legend_name": "Dawnbreaker", "legend_desc": "Combo finishers call down a pillar of holy light (x2.5 damage around the target)"},
+	"druid": {"noun": "Staff", "hand": "handslot.r", "models": ["druid_staff", FW % "staff_A", FW % "staff_A", FW % "staff_D", FW % "staff_D"],
+		"legend": "heartwood", "legend_name": "Heartwood", "legend_desc": "Rooted skeletons take double damage"},
+	"engineer": {"noun": "Crossbow", "hand": "handslot.r", "models": ["crossbow_1handed", "crossbow_1handed", "crossbow_2handed", "crossbow_2handed", "crossbow_2handed"],
+		"legend": "dragonmaw", "legend_name": "Dragonmaw", "legend_desc": "Bolts set skeletons ablaze, and turrets fire twice as fast"},
 }
+
+
+## Full resource path of a weapon model name (camp starter weapons live in assets/weapons).
+func weapon_path(model_name: String) -> String:
+	return model_name if model_name.begins_with("res://") else WEAPON_DIR % model_name
+
+
+## How a weapon model sits in the hand: bows are turned so the string faces the archer.
+func weapon_offset(path: String) -> Transform3D:
+	var f := path.get_file()
+	if f.begins_with("bow_") and path.contains("fantasy_weapons"):
+		return Transform3D(Basis(Vector3.UP, -PI / 2), Vector3.ZERO)
+	if f.begins_with("bow"):
+		return Transform3D(Basis(Vector3.UP, PI), Vector3.ZERO)
+	return Transform3D.IDENTITY
+
+
+const WEAPON_DIR := "res://assets/weapons/%s.gltf"
 const WEAPON_STOCK_SIZE := 3
 const BREW_MAX := 3
 const BREWS := {
@@ -200,6 +246,24 @@ const MASTERY := {
 		{"id": "assassin", "name": "Assassin", "desc": "Backstabs deal +0.5x more damage", "max": 2, "base_cost": 100},
 		{"id": "poison", "name": "Venom Blades", "desc": "Hits poison for 4 damage/s over 3s", "max": 1, "base_cost": 150},
 		{"id": "fleet", "name": "Fleet Footed", "desc": "+8% move speed", "max": 2, "base_cost": 70},
+	],
+	"paladin": [
+		{"id": "hallowed", "name": "Hallowed Ground", "desc": "Consecrate lasts +1.5s", "max": 2, "base_cost": 80},
+		{"id": "radiance", "name": "Radiance", "desc": "Consecrate radius +1", "max": 2, "base_cost": 100},
+		{"id": "judgement", "name": "Judgement", "desc": "Combo finishers smite everything around the target", "max": 1, "base_cost": 160},
+		{"id": "devotion", "name": "Devotion", "desc": "+15 max health", "max": 3, "base_cost": 70},
+	],
+	"druid": [
+		{"id": "overgrowth", "name": "Overgrowth", "desc": "Roots hold +0.75s longer", "max": 2, "base_cost": 80},
+		{"id": "bramble", "name": "Bramble", "desc": "Rooted skeletons take 8 damage/s", "max": 1, "base_cost": 140},
+		{"id": "thornweave", "name": "Thornweave", "desc": "Thorns pass through +1 enemy", "max": 2, "base_cost": 110},
+		{"id": "regrowth", "name": "Regrowth", "desc": "Heal 4 health for every skeleton you root", "max": 1, "base_cost": 150},
+	],
+	"engineer": [
+		{"id": "overclock", "name": "Overclock", "desc": "Turret fires 20% faster", "max": 2, "base_cost": 90},
+		{"id": "durable", "name": "Reinforced", "desc": "Turret lasts +3s", "max": 2, "base_cost": 80},
+		{"id": "twin_turret", "name": "Twin Turrets", "desc": "Keep 2 turrets out at once", "max": 1, "base_cost": 180},
+		{"id": "shrapnel", "name": "Shrapnel", "desc": "Turret bolts burst, hitting nearby enemies", "max": 1, "base_cost": 150},
 	],
 }
 
@@ -312,7 +376,7 @@ func _add_joy_axis(action: String, axis: JoyAxis, value: float) -> void:
 func start_run(class_id: String) -> void:
 	selected_class = class_id
 	var c: Dictionary = CLASSES[class_id]
-	var max_hp: int = c.hp + upgrades.vitality * 12 + mastery_level(class_id, "toughness") * 15
+	var max_hp: int = c.hp + upgrades.vitality * 12 + (mastery_level(class_id, "toughness") + mastery_level(class_id, "devotion")) * 15
 	var t := clampi(torment, 0, torment_unlocked)
 	run = {
 		"class": class_id,
@@ -458,6 +522,45 @@ func apply_boon(id: String) -> void:
 		"vampire":
 			run.lifesteal += 2
 	run_changed.emit()
+
+
+## Undo a boon (the merchant's Cleanse swaps one for a fresh pick).
+func remove_boon(id: String) -> void:
+	if not id in run.boons:
+		return
+	run.boons.erase(id)
+	match id:
+		"blood_pact":
+			run.dmg_mult /= 1.35
+			run.max_hp = int(run.max_hp / 0.8)
+		"vigor":
+			run.max_hp -= 30
+			run.hp = minf(run.hp, run.max_hp)
+		"swift":
+			run.speed_mult /= 1.15
+			run.cd_mult /= 0.8
+		"greed":
+			run.gold_mult /= 1.6
+		"bone_ward":
+			run.dmg_taken_mult /= 0.8
+		"vampire":
+			run.lifesteal -= 2
+	run_changed.emit()
+
+
+## Every third floor has a boss; deeper runs meet a new one each time, then the cycle repeats harder.
+const BOSSES := {
+	"bone_king": {"name": "The Bone King", "color": Color(1, 0.45, 0.3)},
+	"vampire": {"name": "Vampire Lord Draven", "color": Color(1, 0.25, 0.35)},
+	"black_knight": {"name": "The Black Knight", "color": Color(0.6, 0.7, 1.0)},
+	"lich": {"name": "The Lich", "color": Color(0.75, 0.45, 1.0)},
+}
+const BOSS_ORDER := ["bone_king", "vampire", "black_knight", "lich"]
+
+
+func boss_for_floor(f: int) -> String:
+	var n := maxi(0, f / FLOORS - 1)
+	return BOSS_ORDER[n % BOSS_ORDER.size()]
 
 
 func is_boss_floor(f: int) -> bool:

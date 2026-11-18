@@ -167,8 +167,11 @@ func _build_pedestals() -> void:
 	var center := Vector3(-11, 0, 2)
 	var i := 0
 	for id in Game.CLASS_ORDER:
-		var ang := deg_to_rad(-60.0 + i * 30.0)
-		var pos := center + Vector3(sin(ang) * 5.5, 0, -cos(ang) * 5.5)
+		# heroes stand on an arc facing the camp's centre
+		var n := Game.CLASS_ORDER.size()
+		var span := 150.0
+		var ang := deg_to_rad(-span * 0.5 + i * span / maxf(n - 1, 1))
+		var pos := center + Vector3(sin(ang) * 6.2, 0, -cos(ang) * 6.2)
 		var it := Interactable.new()
 		it.radius = 1.9
 		it.prompt_height = 3.4
@@ -190,9 +193,9 @@ func _build_pedestals() -> void:
 		ch.rotation.y = atan2(to_center.x, to_center.z) + PI * 0.15
 		it.add_child(ch)
 		if cls.weapon_r != "":
-			Models.attach(ch, Models.WEAPON % cls.weapon_r, "handslot.r")
+			Models.attach(ch, Models.WEAPON % cls.weapon_r, "handslot.r", Game.weapon_offset(Models.WEAPON % cls.weapon_r))
 		if cls.weapon_l != "":
-			Models.attach(ch, Models.WEAPON % cls.weapon_l, "handslot.l")
+			Models.attach(ch, Models.WEAPON % cls.weapon_l, "handslot.l", Game.weapon_offset(Models.WEAPON % cls.weapon_l))
 		var ap: AnimationPlayer = ch.get_node("AnimationPlayer")
 		ap.play("general/Idle_A")
 		ap.seek(randf() * 1.0)

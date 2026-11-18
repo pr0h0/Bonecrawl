@@ -56,7 +56,7 @@ func _ready() -> void:
 		glow = md.color
 	elif kind == "weapon":
 		var cw: Dictionary = Game.CLASS_WEAPONS[item["class"]]
-		var path: String = Models.WEAPON % cw.models[int(item.rarity)]
+		var path: String = Game.weapon_path(cw.models[int(item.rarity)])
 		_model = Models.scene(path).instantiate()
 		var box2 := Models.aabb_of(path)
 		sc = 1.1 / maxf(box2.size.x, maxf(box2.size.y, box2.size.z))

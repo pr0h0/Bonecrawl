@@ -34,6 +34,7 @@ var floor_label: Label
 var weapon_label: Label
 var boss_root: Control
 var boss_bar: ProgressBar
+var boss_label: Label
 var banner: Label
 var vignette: ColorRect
 var fade: ColorRect
@@ -262,9 +263,9 @@ void fragment(){
 	boss_root.position = Vector2(-400, -200)
 	boss_root.custom_minimum_size = Vector2(800, 0)
 	run_root.add_child(boss_root)
-	var bl := _label("THE BONE KING", 26, Color(1, 0.45, 0.3))
-	bl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	boss_root.add_child(bl)
+	boss_label = _label("THE BONE KING", 26, Color(1, 0.45, 0.3))
+	boss_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	boss_root.add_child(boss_label)
 	boss_bar = _bar(Color(0.85, 0.3, 0.1), 22)
 	boss_root.add_child(boss_bar)
 	boss_root.visible = false
@@ -329,7 +330,8 @@ func update_run(player: Player, boss: Enemy) -> void:
 		_skill_icon_class = player.class_id
 		skill_widget.title = player.cls.skill_name.to_upper()
 		var icon_model: String = {"knight": "shield_badge_color", "barbarian": "axe_2handed", "ranger": "arrow_bow_bundle",
-			"mage": "spellbook_open", "rogue": "smokebomb"}.get(player.class_id, "sword_1handed")
+			"mage": "spellbook_open", "rogue": "smokebomb", "paladin": "paladin_shield", "druid": "druid_staff",
+			"engineer": "turret_base"}.get(player.class_id, "sword_1handed")
 		skill_widget.icon = icons.icon(Models.WEAPON % icon_model, 128, Vector3(-0.3, 0.7, 0.2))
 	weapon_label.text = "%s WEAPON" % Game.WEAPON_TIERS[r.weapon_tier].to_upper()
 	weapon_label.add_theme_color_override("font_color", [Color(0.8, 0.8, 0.8), Color(0.4, 1, 0.5), Color(0.5, 0.65, 1)][r.weapon_tier])
@@ -340,6 +342,9 @@ func update_run(player: Player, boss: Enemy) -> void:
 	(vignette.material as ShaderMaterial).set_shader_parameter("strength", low * (0.75 + 0.25 * sin(Time.get_ticks_msec() * 0.008)))
 	if boss and is_instance_valid(boss) and not boss.dead:
 		boss_root.visible = true
+		var info: Dictionary = Game.BOSSES.get(boss.boss_id, Game.BOSSES.bone_king)
+		boss_label.text = String(info.name).to_upper()
+		boss_label.add_theme_color_override("font_color", info.color)
 		boss_bar.max_value = boss.max_hp
 		boss_bar.value = boss.hp
 	else:
@@ -438,7 +443,7 @@ func _build_hub_hud() -> void:
 	v.add_child(hub_desc)
 	hub_stats = _label("", 15, Color(0.75, 0.75, 0.8))
 	v.add_child(hub_stats)
-	var hint := _label("Walk to a hero and press E to choose (E again for Mastery). Upgrades at the green shrine, Torment at the skull altar, buildings around camp. Gear: ESC > Inventory (or I). Enter the crypt to begin.", 15, Color(0.75, 0.85, 0.75))
+	var hint := _label("Walk to a hero and press E to choose (E again for Mastery). Upgrades at the green shrine, Torment at the skull altar, buildings around camp. Gear: ESC > Inventory (or I). Enter the crypt to begin.\nCOMBAT: every 3rd hit in a row is a finisher. Attack right out of a roll for a dash strike. Roll just before a blow lands for a PERFECT dodge (slow-mo, next hit crits).", 15, Color(0.75, 0.85, 0.75))
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD
 	hint.custom_minimum_size = Vector2(400, 0)
 	v.add_child(hint)
@@ -866,7 +871,7 @@ func show_torment() -> void:
 
 func item_icon(it: Dictionary) -> Texture2D:
 	if it.slot == "weapon":
-		var wp: String = Models.WEAPON % Game.CLASS_WEAPONS[it["class"]].models[int(it.rarity)]
+		var wp: String = Game.weapon_path(Game.CLASS_WEAPONS[it["class"]].models[int(it.rarity)])
 		return icons.icon(wp, 128, Vector3(-0.35, 0.6, 0.6))
 	var path: String = Game.SLOT_MODELS[it.slot][int(it.rarity)]
 	return icons.icon(path, 128, Vector3(-0.35, 0.6, 0.0))

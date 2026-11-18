@@ -14,27 +14,40 @@ const ANIM_LIBS := {
 	"ranged": "res://assets/animations/Rig_Medium_CombatRanged.glb",
 	"special": "res://assets/animations/Rig_Medium_Special.glb",
 }
+## Large-rig characters (Skeleton Golem, Black Knight) use their own clip set.
+const ANIM_LIBS_LARGE := {
+	"general": "res://assets/animations/Rig_Large_General.glb",
+	"move": "res://assets/animations/Rig_Large_MovementBasic.glb",
+	"moveadv": "res://assets/animations/Rig_Large_MovementAdvanced.glb",
+	"melee": "res://assets/animations/Rig_Large_CombatMelee.glb",
+}
 const LOOPING := ["Idle_A", "Idle_B", "Running_A", "Running_B", "Walking_A", "Walking_B", "Walking_C",
 	"Melee_Blocking", "Melee_2H_Attack_Spinning", "Ranged_Magic_Spellcasting", "Ranged_Bow_Aiming_Idle",
 	"Skeletons_Idle", "Skeletons_Walking", "Running_Strafe_Left", "Running_Strafe_Right", "Melee_2H_Idle",
 	"Death_A_Pose", "Death_B_Pose", "Skeletons_Death_Pose", "Skeletons_Inactive_Floor_Pose", "Sit_Floor_Idle",
-	"Cheering", "Skeletons_Taunt_Longer"]
+	"Cheering", "Skeletons_Taunt_Longer", "Walking_A", "Running_A", "Melee_Unarmed_Idle", "Ranged_2H_Aiming", "Ranged_1H_Aiming"]
 
 var _scenes := {}
 var _aabbs := {}
 var _libs := {}
+var _libs_large := {}
 
 
 func _ready() -> void:
-	for key in ANIM_LIBS:
-		var inst: Node = load(ANIM_LIBS[key]).instantiate()
+	_load_libs(ANIM_LIBS, _libs)
+	_load_libs(ANIM_LIBS_LARGE, _libs_large)
+
+
+func _load_libs(paths: Dictionary, out: Dictionary) -> void:
+	for key in paths:
+		var inst: Node = load(paths[key]).instantiate()
 		var ap: AnimationPlayer = inst.get_node("AnimationPlayer")
 		var lib: AnimationLibrary = ap.get_animation_library("")
 		for anim_name in lib.get_animation_list():
 			var a := lib.get_animation(anim_name)
 			if String(anim_name) in LOOPING:
 				a.loop_mode = Animation.LOOP_LINEAR
-		_libs[key] = lib
+		out[key] = lib
 		inst.free()
 
 
@@ -111,13 +124,34 @@ func character(model_path: String) -> Node3D:
 	ap.name = "AnimationPlayer"
 	root.add_child(ap)
 	ap.root_node = NodePath("..")
-	for key in _libs:
-		ap.add_animation_library(key, _libs[key])
+	var libs := _libs_large if is_large(root) else _libs
+	for key in libs:
+		ap.add_animation_library(key, libs[key])
+	_tame_metal(root)
 	return root
 
 
+## Fully metallic materials (the Paladin's armour) render black without reflections; soften them.
+func _tame_metal(root: Node) -> void:
+	for mi in meshes_of(root):
+		var mesh: Mesh = (mi as MeshInstance3D).mesh
+		if mesh == null:
+			continue
+		for i in mesh.get_surface_count():
+			# the imported material is shared by every instance, so adjusting it once covers them all
+			var mat := mesh.surface_get_material(i) as BaseMaterial3D
+			if mat and mat.metallic > 0.5:
+				mat.metallic = 0.3
+				mat.roughness = 0.45
+
+
+func is_large(character_root: Node) -> bool:
+	return character_root.has_node("Rig_Large")
+
+
 func skeleton_of(character_root: Node) -> Skeleton3D:
-	return character_root.get_node_or_null("Rig_Medium/Skeleton3D")
+	var sk := character_root.get_node_or_null("Rig_Medium/Skeleton3D")
+	return sk if sk else character_root.get_node_or_null("Rig_Large/Skeleton3D")
 
 
 func attach(character_root: Node, item_path: String, bone := "handslot.r", offset := Transform3D.IDENTITY) -> Node3D:
@@ -130,6 +164,7 @@ func attach(character_root: Node, item_path: String, bone := "handslot.r", offse
 	var item: Node3D = scene(item_path).instantiate()
 	item.transform = offset
 	ba.add_child(item)
+	_tame_metal(item)
 	return item
 
 

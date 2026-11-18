@@ -17,10 +17,12 @@ func setup(model_name_: String) -> void:
 	# barrels/crates have their origin at the centre; lift them onto the floor
 	if box.position.y < -0.1:
 		m.position.y = -box.position.y
+	# round collider so heroes and skeletons slide around it instead of snagging on corners
 	var cs := CollisionShape3D.new()
-	var bs := BoxShape3D.new()
-	bs.size = box.size * 0.85
-	cs.shape = bs
+	var cyl := CylinderShape3D.new()
+	cyl.radius = minf(box.size.x, box.size.z) * 0.36
+	cyl.height = box.size.y * 0.9
+	cs.shape = cyl
 	cs.position = box.get_center() + Vector3(0, m.position.y, 0)
 	add_child(cs)
 
