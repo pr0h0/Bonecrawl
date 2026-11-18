@@ -43,8 +43,9 @@ Or open the folder in the Godot 4.7 editor and press F5.
 - **Between floors:** every descent lands you in a safe room with the travelling merchant (potions, healing,
   max health, boons, brews, crafting materials, a sealed class weapon, weapon sharpening, swapping a boon).
   Paid with gold found this run; the camp's Merchant's Tent adds 2 wares and a 15% discount.
-- **Going deeper:** every third floor has a boss: the Bone King (3), Vampire Lord Draven (6),
-  the Black Knight (9), the Lich (12), then the cycle repeats, harder each time.
+- **Going deeper:** every third floor has a boss. The Bone King always guards floor 3; after that,
+  Vampire Lord Draven, the Black Knight and the Lich come in a random order each run, then all four
+  keep returning in shuffled cycles, harder each time.
 - **Death:** you keep part of the gold you found (50%, up to 95% with Treasury upgrades). Victory keeps 100%.
 
 ## Combat

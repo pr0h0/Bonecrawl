@@ -73,7 +73,7 @@
 
 **Crawl the crypt. Choose your doors. Break the Bone King.**
 
-Bonecrawl is a fast ¾ top-down roguelite. Pick one of eight heroes at the graveyard camp and descend into a skeleton-infested crypt, one room at a time. Every cleared room opens new gates that show what lies behind them: a fight, an elite pack, treasure, a shrine or traps. Plan your route, survive, and face the Bone King on the third floor. Then leave with your loot, or go deeper to meet a new boss every third floor.
+Bonecrawl is a fast ¾ top-down roguelite. Pick one of eight heroes at the graveyard camp and descend into a skeleton-infested crypt, one room at a time. Every cleared room opens new gates that show what lies behind them: a fight, an elite pack, treasure, a shrine or traps. Plan your route, survive, and face the Bone King on the third floor. Then leave with your loot, or go deeper: every third floor brings another boss, in a different order each run.
 
 **Eight heroes, eight playstyles**
 - **Knight:** sword and board. Shield Wall blocks and reflects arrows, then bashes.

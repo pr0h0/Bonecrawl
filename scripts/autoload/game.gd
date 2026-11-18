@@ -559,8 +559,23 @@ const BOSS_ORDER := ["bone_king", "vampire", "black_knight", "lich"]
 
 
 func boss_for_floor(f: int) -> String:
+	## The Bone King always guards floor 3 (the run's goal). Deeper bosses come in a per-run
+	## shuffled order; each later cycle of four is reshuffled, never repeating the last boss.
 	var n := maxi(0, f / FLOORS - 1)
-	return BOSS_ORDER[n % BOSS_ORDER.size()]
+	if run.is_empty():
+		return BOSS_ORDER[n % BOSS_ORDER.size()]
+	if not run.has("boss_order"):
+		var rest: Array = BOSS_ORDER.slice(1)
+		rest.shuffle()
+		run["boss_order"] = [BOSS_ORDER[0]] + rest
+	var order: Array = run.boss_order
+	while order.size() <= n:
+		var cycle: Array = BOSS_ORDER.duplicate()
+		cycle.shuffle()
+		if cycle[0] == order[-1]:
+			cycle.append(cycle.pop_front())
+		order.append_array(cycle)
+	return order[n]
 
 
 func is_boss_floor(f: int) -> bool:
