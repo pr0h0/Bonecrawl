@@ -1,0 +1,4 @@
+Music (all CC0, from OpenGameArt.org)
+- dungeon_ambience.ogg  "Dungeon Ambience" by yd        https://opengameart.org/content/dungeon-ambience
+- dungeon_theme.ogg     "Mysterious Cave Theme Loop" by beardalaxy  https://opengameart.org/content/mysterious-cave-theme-loop
+- boss_battle.ogg       "8-Bit Battle Loop" by wolfgang https://opengameart.org/content/8-bit-battle-loop
