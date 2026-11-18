@@ -29,7 +29,7 @@ func set_prompt_visible(v: bool) -> void:
 	if _label == null:
 		return
 	_label.visible = v and enabled
-	_label.text = "[E]  " + prompt
+	_label.text = ("[USE]  " if Game.touch_mode else "[E]  ") + prompt
 	_label.position.y = prompt_height
 
 

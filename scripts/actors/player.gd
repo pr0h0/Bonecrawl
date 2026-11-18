@@ -257,11 +257,33 @@ func _update_aim(cmd: Dictionary) -> void:
 	if time < _locked_until and _locked_aim != Vector3.ZERO:
 		aim_dir = _locked_aim
 		return
+	if Game.touch_mode and not in_hub:
+		# touch has no aim stick: face the nearest skeleton in reach, else the way you move
+		var t := _touch_target()
+		if t != Vector3.ZERO:
+			aim_dir = t
+			return
 	var m: Vector3 = cmd.move
 	if m.length() > 0.1:
 		aim_dir = m.normalized()
 	else:
 		aim_dir = forward()
+
+
+func _touch_target() -> Vector3:
+	var reach := 15.0 if cls.attack == "ranged" else 5.5
+	var best := Vector3.ZERO
+	var best_d := reach
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e.dead or e.get("state") == "spawning":
+			continue
+		var to: Vector3 = e.global_position - global_position
+		to.y = 0
+		var d := to.length()
+		if d > 0.3 and d < best_d:
+			best_d = d
+			best = to / d
+	return best
 
 
 var _locked_aim := Vector3.ZERO   # facing held for the duration of an attack

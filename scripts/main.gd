@@ -83,6 +83,9 @@ func _ready() -> void:
 	add_child(cam)
 	hud = HUD.new()
 	add_child(hud)
+	var touch := TouchControls.new()
+	touch.main = self
+	add_child(touch)
 	hud.title_dismissed.connect(_on_title_dismissed)
 	hud.boon_picked.connect(_on_boon_picked)
 	hud.resume_pressed.connect(_toggle_pause)

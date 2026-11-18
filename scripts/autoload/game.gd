@@ -312,6 +312,41 @@ func _ready() -> void:
 	_setup_input()
 	load_game()
 	_apply_volumes()
+	if OS.has_feature("web_android") or OS.has_feature("web_ios") or OS.has_feature("mobile") \
+			or "--touch" in OS.get_cmdline_user_args():
+		enable_touch_mode.call_deferred()
+
+
+## Phones and tablets: on-screen controls (TouchControls), auto-aim, and no "mouse click = attack"
+## (a tap is also reported as a mouse click, which would swing at every tap on the screen).
+signal touch_mode_changed
+var touch_mode := false
+
+
+func enable_touch_mode() -> void:
+	if touch_mode:
+		return
+	touch_mode = true
+	for action in ["attack", "skill"]:
+		for ev in InputMap.action_get_events(action):
+			if ev is InputEventMouseButton:
+				InputMap.action_erase_event(action, ev)
+	_apply_touch_scale()
+	get_tree().root.size_changed.connect(_apply_touch_scale)
+	touch_mode_changed.emit()
+
+
+## On short phone screens the 900-unit-tall UI would shrink text to a few pixels; enlarge it.
+func _apply_touch_scale() -> void:
+	var f := 1.0
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--touch_scale="):
+			f = float(a.get_slice("=", 1))
+	if OS.has_feature("web"):
+		var css_h = JavaScriptBridge.eval("Math.min(window.innerHeight, window.innerWidth)")
+		if css_h != null and float(css_h) > 0.0:
+			f = clampf(560.0 / float(css_h), 1.0, 1.5)
+	get_tree().root.content_scale_factor = f
 
 
 func _setup_input() -> void:

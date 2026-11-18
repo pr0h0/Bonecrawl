@@ -21,7 +21,7 @@
 |---|---|
 | Embed in page | Manually set size |
 | Viewport dimensions | 1280 × 720 |
-| Mobile friendly | Off (no touch controls) |
+| Mobile friendly | On, orientation **Landscape** (touch controls appear automatically on phones and tablets) |
 | Automatically start on page load | Off ("Run game" button, so the browser allows audio) |
 | Fullscreen button | On |
 | Enable scrollbars | Off |
@@ -40,7 +40,7 @@
 | Field | Value |
 |---|---|
 | Made with | Godot |
-| Inputs | Keyboard, Mouse, Xbox controller, Gamepad (any) |
+| Inputs | Keyboard, Mouse, Xbox controller, Gamepad (any), Touchscreen |
 | Average session | About a half-hour |
 | Languages | English |
 | Accessibility | (none; you can tick "Configurable controls" only if you add rebinding) |
@@ -108,6 +108,8 @@ Bonecrawl is a fast ¾ top-down roguelite. Pick one of eight heroes at the grave
 | Use / open | E / Enter | B |
 | Pause / inventory | Esc / I | Start |
 | Fullscreen | F11 | |
+
+**On phones and tablets** (landscape): drag anywhere on the left half to move, and use the buttons on the right for attack, dodge, skill, potion and use. The pause button is at the top right. Attacks auto-aim at the nearest skeleton.
 
 Progress is saved in your browser. Clearing site data for itch.io resets it.
 

@@ -27,6 +27,11 @@ Or open the folder in the Godot 4.7 editor and press F5.
 | Pause | Esc / P | Start |
 | Fullscreen | F11 (or the pause menu) | |
 
+**Touch (phones and tablets, landscape):** on-screen controls appear on the first touch, or right
+away on mobile browsers. Drag anywhere on the left half to move; buttons on the right attack, dodge,
+use the skill, drink a potion and use things; pause is top right. Attacks auto-aim at the nearest
+skeleton, and the UI scales up on small screens (tall panels scroll).
+
 ## How a run works
 
 - **Camp:** walk to a hero and press E to select or unlock them. The green shrine sells permanent upgrades,

@@ -285,6 +285,8 @@ void fragment(){
 	help.custom_minimum_size = Vector2(880, 0)
 	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	run_root.add_child(help)
+	help.visible = not Game.touch_mode
+	Game.touch_mode_changed.connect(func(): help.visible = false)
 	run_root.visible = false
 
 
@@ -447,6 +449,11 @@ func _build_hub_hud() -> void:
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD
 	hint.custom_minimum_size = Vector2(400, 0)
 	v.add_child(hint)
+	var touch_hint := func():
+		hint.text = "Walk to a hero and tap USE to choose (USE again for Mastery). Upgrades at the green shrine, Torment at the skull altar, buildings around camp. Gear: pause (top right) > Inventory. Enter the crypt to begin.\nCOMBAT: every 3rd hit in a row is a finisher. Attack right out of a roll for a dash strike. Roll just before a blow lands for a PERFECT dodge (slow-mo, next hit crits)."
+	Game.touch_mode_changed.connect(touch_hint)
+	if Game.touch_mode:
+		touch_hint.call()
 	hub_root.visible = false
 
 
@@ -495,7 +502,8 @@ func _build_title() -> void:
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 50)
 	v.add_child(gap)
-	var press := _label("PRESS ANY KEY", 28, Color(1, 1, 1))
+	var press := _label("TAP TO START" if Game.touch_mode else "PRESS ANY KEY", 28, Color(1, 1, 1))
+	Game.touch_mode_changed.connect(func(): press.text = "TAP TO START")
 	press.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(press)
 	var tw := press.create_tween().set_loops()
@@ -638,9 +646,21 @@ func _modal_panel(title: String, width := 900.0) -> VBoxContainer:
 	var p := PanelContainer.new()
 	p.custom_minimum_size = Vector2(width, 0)
 	center.add_child(p)
+	# panels taller than the screen (phones, small windows) scroll instead of running off the edge
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	p.add_child(scroll)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 18)
-	p.add_child(v)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(v)
+	var fit := func():
+		if not is_instance_valid(scroll):
+			return
+		var max_h := modal_root.get_viewport_rect().size.y - 70.0
+		scroll.custom_minimum_size.y = minf(v.get_combined_minimum_size().y, max_h)
+	v.minimum_size_changed.connect(fit)
+	fit.call_deferred()
 	var t := _label(title, 40, GOLD)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(t)
